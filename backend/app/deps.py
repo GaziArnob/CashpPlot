@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import plans
-from app.db import get_db
+from app.db import get_db, scope_to_business
 from app.models import AuditLog, Business, User
 from app.security import decode_token
 
@@ -42,6 +42,7 @@ def get_business(user: User = Depends(get_current_user), db: Session = Depends(g
         business = db.scalar(select(Business).where(Business.user_id == user.id).order_by(Business.id))
     if business is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Onboarding required: create your business first")
+    scope_to_business(db, business.id)
     return business
 
 

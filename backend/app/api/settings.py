@@ -9,7 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app import services
-from app.db import Base, get_db
+from app.db import Base, bypass_rls, get_db
 from app.deps import audit, get_business, get_current_user, needs, owned, require_owner
 from app.models import (Bill, Business, ChatMessage, CreditScore, Customer, Goal, Invoice, LenderAccess, Loan,
                         Notification, RefreshToken, Reminder, Repayment, Supplier, Transaction, User, utcnow)
@@ -72,6 +72,7 @@ def revoke_lender_access(access_id: int, business: Business = Depends(get_busine
 @router.get("/lender/view")
 def lender_view(x_lender_token: str = Header(..., max_length=128), db: Session = Depends(get_db)):
     """What a lender sees with a valid token: only the scopes the owner granted."""
+    bypass_rls(db)  # the token, not a signed-in business, decides what is visible
     row = db.scalar(select(LenderAccess).where(LenderAccess.token_hash == _hash(x_lender_token)))
     if row is None or row.revoked_at is not None or row.expires_at <= utcnow():
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Access token invalid, expired or revoked")

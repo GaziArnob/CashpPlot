@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from pathlib import Path
 
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import get_settings
@@ -23,8 +23,44 @@ engine = _make_engine(get_settings().database_url)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
+def _is_postgres(db: Session) -> bool:
+    return db.get_bind().dialect.name == "postgresql"
+
+
+@event.listens_for(SessionLocal, "after_begin")
+def _apply_tenant_context(session, transaction, connection):
+    """On PostgreSQL, tell the database which business this transaction belongs to.
+
+    Row-level security (migration 0005) then hides every other business's rows, even if a query forgets its
+    own business_id filter. Request sessions enforce it; background jobs, the seed and tests run with it
+    bypassed. SQLite has no such feature and is skipped.
+    """
+    if connection.dialect.name != "postgresql":
+        return
+    enforce = bool(session.info.get("enforce_rls"))
+    connection.execute(
+        text("SELECT set_config('app.business_id', :b, true), set_config('app.bypass_rls', :x, true)"),
+        {"b": str(session.info.get("business_id") or ""), "x": "off" if enforce else "on"},
+    )
+
+
+def scope_to_business(db: Session, business_id: int) -> None:
+    """Pin this request's session to one business (called once the caller's business is known)."""
+    db.info["business_id"] = business_id
+    if _is_postgres(db):
+        db.execute(text("SELECT set_config('app.business_id', :b, true)"), {"b": str(business_id)})
+
+
+def bypass_rls(db: Session) -> None:
+    """For the few requests that must read across businesses (a lender opening a shared view by token)."""
+    db.info["enforce_rls"] = False
+    if _is_postgres(db):
+        db.execute(text("SELECT set_config('app.bypass_rls', 'on', true)"))
+
+
 def get_db() -> Iterator[Session]:
     db = SessionLocal()
+    db.info["enforce_rls"] = True
     try:
         yield db
     finally:

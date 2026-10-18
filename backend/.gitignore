@@ -5,3 +5,4 @@ __pycache__/
 *.db
 alerts.log
 .pytest_cache/
+.env.postgres

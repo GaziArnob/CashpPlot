@@ -6,10 +6,12 @@ The result is only a suggestion; the owner confirms it before a transaction is s
 import base64
 import io
 import json
+import os
 import re
 from datetime import date
 
 from app.ai import providers
+from app.config import get_settings
 
 GEMINI_PROMPT = (
     "Read this receipt. Reply with JSON only: "
@@ -58,6 +60,11 @@ def _tesseract(image_bytes: bytes) -> str | None:
         from PIL import Image
     except ImportError:
         return None
+    cfg = get_settings()
+    if cfg.tesseract_cmd:
+        pytesseract.pytesseract.tesseract_cmd = cfg.tesseract_cmd
+    if cfg.tessdata_prefix:
+        os.environ["TESSDATA_PREFIX"] = cfg.tessdata_prefix
     try:
         return pytesseract.image_to_string(Image.open(io.BytesIO(image_bytes)))
     except Exception:
