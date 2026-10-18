@@ -13,24 +13,9 @@ import { longDate, money } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import type { ActionPlan as Plan, AdvisorSummary, RecoveryCustomer, Reminder } from "@/lib/types";
 
-type Lang = "en" | "bn";
-
 const ACTION_COLOR = {
   stop_credit: "red", visit: "red", call: "amber", discount: "blue", send_reminder: "slate", wait: "green",
 } as const;
-
-function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang) => void }) {
-  return (
-    <div className="inline-flex rounded-lg border border-slate-300 bg-white p-0.5">
-      {(["en", "bn"] as const).map((l) => (
-        <button key={l} onClick={() => onChange(l)}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium ${lang === l ? "bg-emerald-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>
-          {l === "en" ? "English" : "বাংলা"}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function Advice({ s, loading }: { s: AdvisorSummary; loading: boolean }) {
   const byAi = s.advice.generated_by !== "template";
@@ -40,10 +25,10 @@ function Advice({ s, loading }: { s: AdvisorSummary; loading: boolean }) {
         <Sparkles className="mt-0.5 size-5 shrink-0 text-emerald-600" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-emerald-900">{s.advice.lang === "bn" ? "আজকের পরামর্শ" : "Today's advice"}</p>
+            <p className="text-sm font-semibold text-emerald-900">Today&apos;s advice</p>
             {loading && <Loader2 className="size-4 animate-spin text-emerald-600" />}
           </div>
-          <p className={`mt-2 leading-relaxed text-slate-800 ${s.advice.lang === "bn" ? "text-[15px]" : "text-sm"}`}>{s.advice.text}</p>
+          <p className={`mt-2 leading-relaxed text-slate-800 text-sm`}>{s.advice.text}</p>
           <p className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
             <ShieldCheck className="size-3.5 text-emerald-600" />
             {byAi ? `Written by free AI (${s.advice.generated_by}); every figure checked against your numbers`
@@ -57,7 +42,7 @@ function Advice({ s, loading }: { s: AdvisorSummary; loading: boolean }) {
 }
 
 function Collections({ s, onDraft, busy }: {
-  s: AdvisorSummary; onDraft: (c: RecoveryCustomer, lang: Lang) => void; busy: string | null;
+  s: AdvisorSummary; onDraft: (c: RecoveryCustomer) => void; busy: string | null;
 }) {
   return (
     <ul className="divide-y divide-slate-100">
@@ -72,14 +57,10 @@ function Collections({ s, onDraft, busy }: {
             </p>
           </div>
           <Badge color={ACTION_COLOR[c.action]}>{c.action_label}</Badge>
-          <div className="flex gap-1">
-            {(["en", "bn"] as const).map((l) => (
-              <Button key={l} variant="secondary" className="px-2" disabled={busy !== null} onClick={() => onDraft(c, l)}>
-                <MessageSquareText className="size-3.5" />
-                {busy === `${c.customer_id}:${l}` ? "…" : l === "en" ? "EN" : "বাংলা"}
-              </Button>
-            ))}
-          </div>
+          <Button variant="secondary" className="px-2" disabled={busy !== null} onClick={() => onDraft(c)}>
+            <MessageSquareText className="size-3.5" />
+            {busy === String(c.customer_id) ? "…" : "Reminder"}
+          </Button>
         </li>
       ))}
     </ul>
@@ -87,19 +68,18 @@ function Collections({ s, onDraft, busy }: {
 }
 
 export default function AdvisorPage() {
-  const [lang, setLang] = useState<Lang>("en");
-  const summary = useApi<AdvisorSummary>(`/cash-advisor/summary?lang=${lang}`);
+  const summary = useApi<AdvisorSummary>("/cash-advisor/summary");
   const plan = useApi<Plan>("/action-plan");
   const [draft, setDraft] = useState<ReminderDraft | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [jobMsg, setJobMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function draftReminder(c: RecoveryCustomer, l: Lang) {
-    setBusy(`${c.customer_id}:${l}`);
+  async function draftReminder(c: RecoveryCustomer) {
+    setBusy(String(c.customer_id));
     setError(null);
     try {
-      const reminder = await api<Reminder>(`/collections/${c.customer_id}/reminder?lang=${l}`, { method: "POST" });
+      const reminder = await api<Reminder>(`/collections/${c.customer_id}/reminder`, { method: "POST" });
       setDraft({ reminder, customer: c.customer_name });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not draft the reminder");
@@ -138,7 +118,6 @@ export default function AdvisorPage() {
             <Button variant="secondary" onClick={runDailyCheck} disabled={busy !== null}>
               <BellRing className="size-4" />{busy === "job" ? "Checking…" : "Run daily check"}
             </Button>
-            <LangToggle lang={lang} onChange={setLang} />
           </div>
         } />
 

@@ -35,7 +35,7 @@ def _llm_answer(toolbox: ToolBox, question: str, history: list[dict], business: 
     messages.append({"role": "user", "content": question})
     results, used, provider = [], [], ""
     for _ in range(s.agent_max_steps):
-        res = providers.chat(messages, TOOL_SCHEMAS)
+        res = providers.chat(messages, TOOL_SCHEMAS, mode=business.ai_mode)
         provider = res.provider
         if not res.tool_calls:
             answer = (res.text or "").strip() or "I could not find an answer to that."

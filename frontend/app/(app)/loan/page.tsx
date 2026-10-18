@@ -7,11 +7,14 @@ import { Badge, Button, Card, CardTitle, ErrorBox, Loading, PageHeader, Stat } f
 import { api } from "@/lib/api";
 import { money } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
+import { IntroduceModal, ReferralsCard } from "@/components/Referrals";
 import type { LoanOption, LoanReadiness, WhatIf } from "@/lib/types";
 
 export default function LoanPage() {
   const readiness = useApi<LoanReadiness>("/loan/readiness");
   const recs = useApi<{ options: LoanOption[] }>("/loan/recommendations");
+  const [intro, setIntro] = useState<LoanOption | null>(null);
+  const [refKey, setRefKey] = useState(0);
   if (readiness.loading && !readiness.data) return <Loading />;
   if (readiness.error || !readiness.data) return <ErrorBox message={readiness.error ?? "No data"} onRetry={readiness.reload} />;
   const r = readiness.data;
@@ -35,14 +38,15 @@ export default function LoanPage() {
         <Card className="overflow-x-auto p-0 xl:col-span-2">
           <div className="px-5 pt-5"><CardTitle>Matching financing options (lowest cost first)</CardTitle></div>
           {recs.loading && !recs.data ? <Loading /> : (
-            <table className="w-full min-w-[600px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-y border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                   <th className="px-5 py-2.5 font-medium">Product</th>
                   <th className="px-3 py-2.5 text-right font-medium">Amount</th>
                   <th className="px-3 py-2.5 text-right font-medium">Rate</th>
                   <th className="px-3 py-2.5 text-right font-medium">Monthly</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Total interest</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Total interest</th>
+                  <th className="px-5 py-2.5"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -55,11 +59,12 @@ export default function LoanPage() {
                     <td className="px-3 py-3 text-right font-semibold tabular">{money(o.recommended_amount)}</td>
                     <td className="px-3 py-3 text-right tabular">{o.rate}%</td>
                     <td className="px-3 py-3 text-right tabular">{money(o.monthly_installment)}</td>
-                    <td className="px-5 py-3 text-right tabular">{money(o.total_interest)}</td>
+                    <td className="px-3 py-3 text-right tabular">{money(o.total_interest)}</td>
+                    <td className="px-5 py-3 text-right"><Button variant="secondary" onClick={() => setIntro(o)}>Request intro</Button></td>
                   </tr>
                 ))}
                 {recs.data && recs.data.options.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-6 text-center text-slate-500">No product fits safely yet. Work through the checklist first.</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-6 text-center text-slate-500">No product fits safely yet. Work through the checklist first.</td></tr>
                 )}
               </tbody>
             </table>
@@ -82,6 +87,8 @@ export default function LoanPage() {
         </Card>
       </div>
 
+      <ReferralsCard refreshKey={refKey} />
+      {intro && <IntroduceModal option={intro} onClose={() => setIntro(null)} onDone={() => { setIntro(null); setRefKey((k) => k + 1); }} />}
       <WhatIfSimulator />
     </>
   );

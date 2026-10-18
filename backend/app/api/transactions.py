@@ -156,7 +156,7 @@ async def scan_receipt(file: UploadFile = File(...), business: Business = Depend
     if len(raw) > MAX_IMAGE_BYTES:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Image larger than 5 MB")
     try:
-        result = ocr.scan(raw, file.content_type)
+        result = ocr.scan(raw, file.content_type, business.ai_mode)
     except ocr.OCRUnavailable as e:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(e))
     except Exception:

@@ -5,8 +5,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai import providers
-from app.api import (actions, advisor, agent, auth, collections, customers, finance, ledger, payables, products,
-                     reports, settings, transactions)
+from app.api import (actions, advisor, agent, auth, billing, collections, customers, finance, ledger, payables,
+                     products, referrals, reports, settings, team, transactions)
 from app.config import get_settings
 from app.db import init_db
 from app.jobs import scheduler
@@ -56,5 +56,5 @@ def health():
 
 
 for r in (auth, transactions, ledger, collections, customers, products, actions, advisor, payables, finance,
-          reports, agent, settings):
+          reports, agent, settings, team, billing, referrals):
     app.include_router(r.router)

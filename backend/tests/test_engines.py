@@ -88,7 +88,7 @@ def test_grounding_check_and_aliases():
     assert ungrounded_numbers("You may be short about 12,000 on Oct 26, 2026.", results) == []
     assert ungrounded_numbers("You may be short 45,000.", results) == ["45,000"]
     a = Aliaser()
-    alias = a.customer(3, "Rahim Store")
-    assert a.restore(f"Call {alias} first.") == "Call Rahim Store first."
-    assert a.restore("Call **Customer C3** first.") == "Call **Rahim Store** first."
+    alias = a.customer(3, "Harbor Market")
+    assert a.restore(f"Call {alias} first.") == "Call Harbor Market first."
+    assert a.restore("Call **Customer C3** first.") == "Call **Harbor Market** first."
     assert a.restore("Customer C99 is unknown.") == "Customer C99 is unknown."

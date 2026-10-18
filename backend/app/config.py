@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     agent_max_steps: int = 5
 
+    billing_mode: str = "demo"  # demo: plan changes take no payment. Anything else needs a payment provider.
     scheduler_enabled: bool = True  # run the daily job inside the app
     daily_job_hour: int = 7
     alerts_log_path: str = "alerts.log"

@@ -12,11 +12,11 @@ from sqlalchemy.orm import Session
 
 from app import services
 from app.db import get_db
-from app.deps import audit, get_business, owned
+from app.deps import audit, get_business, needs, owned, require_owner
 from app.models import Business, Goal, Notification
 from app.schemas import GoalIn, GoalOut, NotificationOut
 
-router = APIRouter(tags=["reports"])
+router = APIRouter(tags=["reports"], dependencies=[Depends(require_owner), Depends(needs("reports"))])
 
 
 def _month(month: str | None) -> tuple[int, int]:

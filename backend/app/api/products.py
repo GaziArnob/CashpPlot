@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import services
 from app.db import get_db
-from app.deps import get_business, owned
+from app.deps import get_business, needs, owned, require_owner
 from app.models import Business, Invoice, Product, SaleItem, StockMovement, Transaction
 from app.schemas import ProductIn, ProductOut, ProductUpdate, SaleItemIn, SaleItemOut, StockMovementIn
 
@@ -44,7 +44,7 @@ def update_product(product_id: int, body: ProductUpdate, business: Business = De
     return p
 
 
-@router.get("/products/performance")
+@router.get("/products/performance", dependencies=[Depends(require_owner), Depends(needs("products"))])
 def product_performance(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     """Metrics, class and a cash-aware stock plan per product; saved as today's snapshot."""
     result = services.product_scores(db, business, persist=True)

@@ -1,7 +1,7 @@
-# SME Finance Assistant — Backend
+# CashPilot — Backend
 
 FastAPI backend for cash flow prediction, payment recovery, explainable credit scoring,
-loan readiness and an AI financial agent. It uses only free AI options, and it works with no API keys
+loan readiness, a cash advisor, supplier payment plans and an AI financial agent. English and any currency (USD by default). It uses only free AI options, and it works with no API keys
 at all (the agent then answers from templates).
 
 ## Run
@@ -18,9 +18,9 @@ cp .env.example .env                              # optional: add free Gemini / 
 - Demo login: `demo@example.com` / `Demo@12345`
 - Tests: `.venv/Scripts/python -m pytest -q`
 
-The seed builds one year of data for "Karim Traders" relative to today: a cash shortage of about
-12,000 nine days ahead (a large supplier bill), Rahim Store 10 days overdue on 15,000, and
-Hasan Enterprise more than 30 days overdue.
+The seed builds one year of data for "Evergreen Traders" relative to today, with a cash shortage a
+little over a week ahead (a large supplier bill), one customer ten days overdue and another more than
+30 days overdue. The demo business is on the Pro plan.
 
 ## Layout
 
@@ -41,7 +41,7 @@ tests/             engine and API tests
 
 ## Free AI
 
-`LLM_PROVIDERS=gemini,groq,ollama` is the fallback order. A provider is used only when configured
+`LLM_PROVIDERS=groq,gemini,ollama` is the fallback order. Each business picks an AI mode in Settings: `cloud`, `local` (own machine only) or `off` (templates only). A provider is used only when configured
 (a key, or `OLLAMA_ENABLED=true`). If all fail or none is set, the agent uses keyword intents and
 templates, so a demo never breaks. Customer and supplier names are replaced with aliases
 ("Customer C12") before any data reaches a provider, and restored in the answer.
@@ -63,6 +63,10 @@ free vision; the result is a suggestion the owner confirms.
 | Loans | `GET /loan/readiness`, `/loan/recommendations`, `POST /loan/what-if`, `GET/POST /loans`, `PATCH /repayments/{id}/paid` |
 | Reports | `GET /reports/pnl?month=YYYY-MM`, `/reports/insights`, `/reports/export` (PDF), `GET/POST/PUT/DELETE /goals`, `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Agent | `POST /agent/chat`, `POST /agent/chat/stream` (SSE), `GET /agent/history`, `/agent/suggestions` |
+| Team | `GET/POST /team`, `DELETE /team/{id}`, `POST /team/{id}/reactivate`, `POST /team/{id}/password` (owner only; staff can record transactions, customers and invoices only) |
+| Plans | `GET/POST /billing/plan` (demo billing, no payments), 402 "Upgrade to Pro" on Pro-only routes; new businesses get a 14-day Pro trial |
+| Referrals | `GET/POST /referrals`, `POST /referrals/{id}/status` (consented introduction requests, not loan applications) |
+| Two-factor | `POST /auth/2fa/setup`, `/auth/2fa/enable`, `/auth/2fa/disable`; login then needs `code` |
 | Settings | `GET/PUT /settings`, `GET/POST /lender-access`, `DELETE /lender-access/{id}`, `GET /lender/view` (X-Lender-Token), `GET /settings/export`, `DELETE /settings/account` |
 
 `/auth/refresh` reads the httpOnly refresh cookie and needs the header `X-Requested-With: fetch`.

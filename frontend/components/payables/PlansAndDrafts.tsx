@@ -42,12 +42,12 @@ function PlanCard({ p, bill, options, currency, onChanged }: {
   const { run, error } = useAction(onChanged);
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState("");
-  const [busyDraft, setBusyDraft] = useState<string | null>(null);
+  const [busyDraft, setBusyDraft] = useState(false);
   const final = ["rejected", "cancelled", "completed"].includes(p.status);
 
-  async function draftMessage(lang: "en" | "bn") {
-    setBusyDraft(lang);
-    try { await run("/negotiation-drafts", { bill_id: p.bill_id, plan_id: p.id, lang }); } catch { /* shown below */ } finally { setBusyDraft(null); }
+  async function draftMessage() {
+    setBusyDraft(true);
+    try { await run("/negotiation-drafts", { bill_id: p.bill_id, plan_id: p.id }); } catch { /* shown below */ } finally { setBusyDraft(false); }
   }
 
   return (
@@ -102,8 +102,7 @@ function PlanCard({ p, bill, options, currency, onChanged }: {
                 onConfirm={() => run(`/payment-plans/${p.id}/supplier-response`, { accepted: false, note: note || null, confirm: true })} />
             </>
           )}
-          <Button variant="ghost" disabled={busyDraft !== null} onClick={() => draftMessage("en")}><FileText className="size-4" />{busyDraft === "en" ? "…" : "Message (EN)"}</Button>
-          <Button variant="ghost" disabled={busyDraft !== null} onClick={() => draftMessage("bn")}><FileText className="size-4" />{busyDraft === "bn" ? "…" : "বাংলা message"}</Button>
+          <Button variant="ghost" disabled={busyDraft} onClick={draftMessage}><FileText className="size-4" />{busyDraft ? "…" : "Draft message"}</Button>
           <ConfirmAction variant="ghost" label="Cancel plan" prompt="Cancel this plan?" confirmLabel="Yes, cancel it"
             onConfirm={() => run(`/payment-plans/${p.id}/cancel`)} />
         </div>
@@ -153,7 +152,6 @@ function DraftCard({ d, onChanged }: { d: NegotiationDraft; onChanged: () => voi
     <li className="py-4">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
         <Badge color={d.status === "marked_sent" ? "green" : "slate"}>{d.status === "marked_sent" ? "you sent it" : "draft"}</Badge>
-        <Badge color="blue">{d.lang === "bn" ? "বাংলা" : "English"}</Badge>
         <span className="text-slate-500">{d.generated_by.startsWith("template") ? "from a template" : `written with AI (${d.generated_by.split(":")[0]})`}</span>
       </div>
       <textarea value={text} onChange={(e) => { setText(e.target.value); setSaved(false); }} rows={9}
@@ -185,7 +183,7 @@ export function DraftsSection({ refreshKey }: { refreshKey: number }) {
           <ul className="divide-y divide-slate-100">
             {drafts.data.map((d) => <DraftCard key={d.id} d={d} onChanged={drafts.reload} />)}
           </ul>
-        ) : <p className="text-sm text-slate-500">No messages yet. Open a plan and choose “Message (EN)” or “বাংলা message”. You can edit it before using it.</p>}
+        ) : <p className="text-sm text-slate-500">No messages yet. Open a plan and choose “Draft message”. You can edit it before using it.</p>}
     </Card>
   );
 }

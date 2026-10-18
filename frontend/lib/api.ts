@@ -59,6 +59,10 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}, ret
     setToken(null);
     if (typeof window !== "undefined") window.location.href = "/login";
   }
+  if (r.status === 409 && typeof window !== "undefined" && window.location.pathname !== "/onboarding") {
+    const body = await r.clone().json().catch(() => null);
+    if (typeof body?.detail === "string" && body.detail.startsWith("Onboarding required")) window.location.href = "/onboarding";
+  }
   if (!r.ok) {
     let msg = r.statusText;
     try {
@@ -79,10 +83,10 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}, ret
   return r.json() as Promise<T>;
 }
 
-export async function login(email: string, password: string) {
+export async function login(email: string, password: string, code?: string) {
   const r = await api<{ access_token: string }>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, ...(code ? { code } : {}) }),
   });
   setToken(r.access_token);
 }
@@ -93,4 +97,17 @@ export async function logout() {
   } finally {
     setToken(null);
   }
+}
+
+/** Download a file the API returns (a PDF or JSON export), sending the login token. */
+export async function downloadFile(path: string, filename: string) {
+  const token = getToken();
+  const r = await fetch(`${API_URL}${path}`, { credentials: "include", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!r.ok) throw new ApiError(r.status, `Download failed (${r.status})`);
+  const url = URL.createObjectURL(await r.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }

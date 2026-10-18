@@ -36,3 +36,32 @@ export function useApi<T>(path: string | null) {
 
   return { data, error, loading, reload, setData };
 }
+
+export type Business = {
+  id: number; name: string; type: string; started_at: string; opening_balance: number; cash_threshold: number;
+  currency: string; reminder_tone: "auto" | "friendly" | "firm" | "final"; ai_mode: "cloud" | "local" | "off";
+};
+
+let businessCache: Promise<Business> | null = null;
+
+/** The signed-in owner's business (name, currency, settings), fetched once and shared across pages. */
+export function useBusiness() {
+  const [business, setBusiness] = useState<Business | null>(null);
+  useEffect(() => {
+    businessCache ??= api<Business>("/settings");
+    businessCache.then(setBusiness).catch(() => { businessCache = null; });
+  }, []);
+  return business;
+}
+
+export function forgetBusiness() {
+  businessCache = null;
+}
+
+export type Me = { id: number; name: string; email: string; role: "owner" | "staff"; totp_enabled: boolean };
+
+/** The signed-in user (role decides which pages show). null until loaded. */
+export function useMe() {
+  const { data } = useApi<Me>("/auth/me");
+  return data;
+}

@@ -131,7 +131,7 @@ def recommend(cf: dict, bill_plans: list[list[dict]], fin: list[dict], suppliers
             relief = after["min_balance"] - current["min_balance"]
             if relief <= 0:
                 continue
-            # Cheapest per taka of relief; supplier changes before debt; then lower risk.
+            # Cheapest per unit of relief; supplier changes before debt; then lower risk.
             key = (round(c["cost"] / relief, 4), c["type"] != "supplier_plan", RISK_RANK[c["risk"]])
             if best is None or key < best[0]:
                 best = (key, c, relief, after)
@@ -161,7 +161,7 @@ def recommend(cf: dict, bill_plans: list[list[dict]], fin: list[dict], suppliers
         c["why_not"] = ("funds arrive after the shortfall starts" if not c["meets_deadline"]
                         else "does not raise the lowest balance" if c["standalone"] <= 0
                         else "not needed once the chosen steps are in place" if not remaining
-                        else "costs more per taka of relief than the chosen steps")
+                        else "costs more per unit of relief than the chosen steps")
         alternatives.append(c)
     for c in chosen + alternatives:
         c.pop("bill", None)
@@ -177,7 +177,7 @@ def recommend(cf: dict, bill_plans: list[list[dict]], fin: list[dict], suppliers
     reasoning = [
         f"The tightest point is {_d(worst['worst_date']):%b %d}, {need:,} below your safety level. {worst['explanation']}",
         "Each step was tested by applying its dated cash movements to your forecast, so a loan repaid before the "
-        "tightest day gets no credit. Steps are ranked by cost per taka of relief, then supplier changes before "
+        "tightest day gets no credit. Steps are ranked by cost per unit of relief, then supplier changes before "
         "debt, then risk.",
         f"With the chosen steps the lowest balance rises from {base_low:,} to {current['min_balance']:,} "
         f"(your safety level is {round(threshold):,}).",

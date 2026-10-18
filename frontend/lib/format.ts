@@ -1,6 +1,10 @@
-export function money(n: number | null | undefined, currency = "BDT") {
+export function money(n: number | null | undefined, currency = "USD") {
   if (n === null || n === undefined) return "—";
-  return `${currency} ${Math.round(n).toLocaleString("en-US")}`;
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(Math.round(n));
+  } catch {
+    return `${currency} ${Math.round(n).toLocaleString("en-US")}`; // not a recognised currency code
+  }
 }
 
 export function compact(n: number) {

@@ -340,41 +340,70 @@ def test_unfixable_gap_is_reported_honestly():
 
 # Negotiation messages
 
-FIELDS = dict(supplier="Meghna", business="Karim Traders", currency="BDT", amount=39_200, due_date="2026-10-27",
+FIELDS = dict(supplier="Meghna", business="Evergreen Traders", currency="USD", amount=39_200, due_date="2026-10-27",
               on_time_rate=0.92)
 
 
-def test_templates_include_the_exact_figures_in_both_languages():
+def test_template_includes_the_exact_figures():
     inst = [{"due_date": "2026-10-27", "amount": 9_500}, {"due_date": "2026-11-26", "amount": 29_700}]
-    en = negotiation.template("partial", "en", installments=inst, **FIELDS)
-    bn = negotiation.template("partial", "bn", installments=inst, **FIELDS)
-    assert "BDT 9,500" in en and "BDT 29,700" in en and "Nov 26, 2026" in en and "92%" in en
-    assert "৯,৫০০ টাকা" in bn and "২৯,৭০০ টাকা" in bn and "২৬ নভেম্বর ২০২৬" in bn and "৩৯,২০০ টাকার" in bn
+    en = negotiation.template("partial", installments=inst, **FIELDS)
+    assert "$9,500" in en and "$29,700" in en and "Nov 26, 2026" in en and "92%" in en and "$39,200" in en
 
 
 def test_history_line_only_when_the_record_is_good():
     one = [{"due_date": "2026-11-26", "amount": 39_200}]
-    assert "on time" not in negotiation.template("extension", "en", installments=one, **{**FIELDS, "on_time_rate": 0.4})
-    assert "on time" not in negotiation.template("extension", "en", installments=one, **{**FIELDS, "on_time_rate": None})
+    assert "on time" not in negotiation.template("extension", installments=one, **{**FIELDS, "on_time_rate": 0.4})
+    assert "on time" not in negotiation.template("extension", installments=one, **{**FIELDS, "on_time_rate": None})
+
+
+def masked(text: str) -> str:
+    return text.replace(FIELDS["supplier"], "[SUPPLIER]").replace(FIELDS["business"], "[BUSINESS]")
 
 
 def test_rewrite_with_changed_figures_is_rejected(monkeypatch):
     one = [{"due_date": "2026-11-26", "amount": 39_200}]
-    base = negotiation.template("extension", "en", installments=one, **FIELDS)
-    monkeypatch.setattr(providers, "chat", lambda m, tools=None: providers.LLMResult(
-        text=base.replace("39,200", "93,200"), provider="fake"))
-    text, by = negotiation.generate("extension", "en", installments=one, **FIELDS)
+    base = negotiation.template("extension", installments=one, **FIELDS)
+    monkeypatch.setattr(providers, "chat", lambda m, tools=None, mode="cloud": providers.LLMResult(
+        text=masked(base).replace("39,200", "93,200"), provider="fake"))
+    text, by = negotiation.generate("extension", installments=one, **FIELDS)
     assert by == "template" and text == base and "93,200" not in text
-    monkeypatch.setattr(providers, "chat", lambda m, tools=None: providers.LLMResult(
-        text=base.replace("I hope you are well.", "Hope you're doing well."), provider="fake"))
-    assert negotiation.generate("extension", "en", installments=one, **FIELDS)[1] == "fake"
+
+
+def test_rewrite_that_loses_the_placeholders_is_rejected(monkeypatch):
+    one = [{"due_date": "2026-11-26", "amount": 39_200}]
+    base = negotiation.template("extension", installments=one, **FIELDS)
+    monkeypatch.setattr(providers, "chat", lambda m, tools=None, mode="cloud": providers.LLMResult(
+        text="Hi there, can we pay $39,200 on Nov 26, 2026 instead? Thanks.", provider="fake"))
+    assert negotiation.generate("extension", installments=one, **FIELDS) == (base, "template")
+
+
+def test_good_rewrite_is_kept_and_real_names_are_put_back(monkeypatch):
+    one = [{"due_date": "2026-11-26", "amount": 39_200}]
+    monkeypatch.setattr(providers, "chat", lambda m, tools=None, mode="cloud": providers.LLMResult(
+        text=masked(negotiation.template("extension", installments=one, **FIELDS)).replace(
+            "I hope you are well.", "Hope you're doing well."), provider="fake"))
+    text, by = negotiation.generate("extension", installments=one, **FIELDS)
+    assert by == "fake" and "Hope you're doing well." in text
+    assert FIELDS["supplier"] in text and FIELDS["business"] in text and "[SUPPLIER]" not in text
+
+
+def test_the_llm_never_sees_the_real_names(monkeypatch):
+    seen = []
+
+    def spy(messages, tools=None, mode="cloud"):
+        seen.append(" ".join(m["content"] for m in messages))
+        raise providers.NoLLMAvailable("spy")
+    monkeypatch.setattr(providers, "chat", spy)
+    negotiation.generate("extension", installments=[{"due_date": "2026-11-26", "amount": 39_200}], **FIELDS)
+    assert seen and FIELDS["supplier"] not in seen[0] and FIELDS["business"] not in seen[0]
+    assert "[SUPPLIER]" in seen[0] and "[BUSINESS]" in seen[0]
 
 
 def test_no_llm_uses_the_template(monkeypatch):
-    def none(m, tools=None):
+    def none(m, tools=None, mode="cloud"):
         raise providers.NoLLMAvailable("none")
     monkeypatch.setattr(providers, "chat", none)
-    assert negotiation.generate("extension", "bn", installments=[{"due_date": "2026-11-26", "amount": 39_200}],
+    assert negotiation.generate("extension", installments=[{"due_date": "2026-11-26", "amount": 39_200}],
                                 **FIELDS)[1] == "template"
 
 
@@ -525,20 +554,17 @@ def test_paying_the_bill_normally_after_a_partial_installment(client):
 def test_drafts_are_editable_and_never_sent(client):
     h, sup, bill = make_business(client, "drafts@example.com")
     plan = client.post("/payment-plans", headers=h, json=plan_body(bill, [(5, 3_000), (25, 5_000)])).json()
-    en = client.post("/negotiation-drafts", headers=h, json={"bill_id": bill["id"], "plan_id": plan["id"],
-                                                             "lang": "en"}).json()
-    bn = client.post("/negotiation-drafts", headers=h, json={"bill_id": bill["id"], "plan_id": plan["id"],
-                                                             "lang": "bn"}).json()
-    assert "Test Supplier" in en["message"] and "BDT 3,000" in en["message"] and en["status"] == "draft"
-    assert "টাকা" in bn["message"] and "Test Supplier" in bn["message"] and bn["generated_by"] == "template:bn"
+    en = client.post("/negotiation-drafts", headers=h, json={"bill_id": bill["id"], "plan_id": plan["id"]}).json()
+    assert "Test Supplier" in en["message"] and "$3,000" in en["message"] and en["status"] == "draft"
+    assert en["generated_by"] == "template"
     assert en["sent_by_app"] is False and "never sends" in en["note"]
     edited = client.put(f"/negotiation-drafts/{en['id']}", headers=h, json={"message": "Salam, my own words."}).json()
     assert edited["message"] == "Salam, my own words." and edited["status"] == "draft"
     assert client.post(f"/negotiation-drafts/{en['id']}/mark-sent", headers=h, json={}).status_code == 422
     sent = client.post(f"/negotiation-drafts/{en['id']}/mark-sent", headers=h, json={"confirm": True}).json()
     assert sent["status"] == "marked_sent" and sent["sent_by_app"] is False
-    assert len(client.get("/negotiation-drafts", headers=h).json()) == 2
-    assert client.delete(f"/negotiation-drafts/{bn['id']}", headers=h).status_code == 204
+    assert len(client.get("/negotiation-drafts", headers=h).json()) == 1
+    assert client.delete(f"/negotiation-drafts/{en['id']}", headers=h).status_code == 204
     other_bill = client.post("/bills", headers=h, json={"supplier_id": sup["id"], "amount": 100,
                                                         "due_date": date.today().isoformat()}).json()
     assert client.post("/negotiation-drafts", headers=h, json={"bill_id": other_bill["id"],

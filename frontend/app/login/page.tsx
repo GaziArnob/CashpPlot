@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Wallet } from "lucide-react";
@@ -12,6 +13,8 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [needCode, setNeedCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -20,10 +23,14 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      await login(email, password);
+      await login(email, password, code || undefined);
       router.replace("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const msg = err instanceof Error ? err.message : "Login failed";
+      if (msg === "Two-factor code required") {
+        setNeedCode(true);
+        setError(null);
+      } else setError(msg);
     } finally {
       setBusy(false);
     }
@@ -50,12 +57,21 @@ export default function LoginPage() {
             <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
           </label>
+          {needCode && (
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Authenticator code</span>
+              <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="6-digit code"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm tracking-widest outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+            </label>
+          )}
           {error && <ErrorBox message={error} />}
           <Button type="submit" disabled={busy} className="w-full">{busy ? "Signing in…" : "Sign in"}</Button>
           <button type="button" onClick={() => { setEmail(DEMO.email); setPassword(DEMO.password); }}
             className="w-full text-center text-sm text-emerald-700 hover:underline">
             Fill in the demo account
           </button>
+          <p className="text-center text-sm text-slate-500">New here? <Link href="/signup" className="font-medium text-emerald-700 hover:underline">Create an account</Link></p>
         </form>
       </div>
     </div>

@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 
 from app import services
 from app.db import get_db
-from app.deps import get_business, get_current_user, owned
+from app.deps import get_business, get_current_user, needs, owned, require_owner
 from app.models import ActionLog, Business, Recommendation, User
 
-router = APIRouter(tags=["actions"])
+router = APIRouter(tags=["actions"], dependencies=[Depends(require_owner), Depends(needs("advisor"))])
 
 
 class ActionDoneIn(BaseModel):

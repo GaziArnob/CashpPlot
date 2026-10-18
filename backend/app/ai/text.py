@@ -10,12 +10,12 @@ POLISH_PROMPT = (
 )
 
 
-def polish_reminder(template_text: str, tone: str, customer: str, business: str) -> tuple[str, str]:
+def polish_reminder(template_text: str, tone: str, customer: str, business: str, mode: str = "cloud") -> tuple[str, str]:
     """Returns (message, generated_by). Falls back to the template on any doubt."""
     masked = template_text.replace(customer, "[CUSTOMER]").replace(business, "[BUSINESS]")
     final_template = template_text
     try:
-        res = providers.chat([{"role": "user", "content": POLISH_PROMPT.format(tone=tone, text=masked)}])
+        res = providers.chat([{"role": "user", "content": POLISH_PROMPT.format(tone=tone, text=masked)}], mode=mode)
     except providers.NoLLMAvailable:
         return final_template, "template"
     out = (res.text or "").strip()

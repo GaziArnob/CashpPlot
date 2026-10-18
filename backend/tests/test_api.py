@@ -29,7 +29,7 @@ def test_dashboard(client, demo_headers, seeded):
     body = r.json()
     assert body["balance"] == 65_000
     assert body["cash_alert"]["gap"] == seeded["first_shortage"]["gap"]
-    assert body["top_collections"][0]["customer_name"] in {"Hasan Enterprise", "Rahim Store"}
+    assert body["top_collections"][0]["customer_name"] in {"Summit Wholesale", "Harbor Market"}
     assert "credit score" in body["summary"]
     assert body["notifications"]
 
@@ -37,7 +37,7 @@ def test_dashboard(client, demo_headers, seeded):
 def test_cashflow_and_calendar(client, demo_headers):
     fc = client.get("/cashflow/forecast?days=30", headers=demo_headers).json()
     assert len(fc["series"]) == 30 and fc["first_shortage"]
-    assert any(d.get("supplier") == "Meghna Distributors" for d in fc["drivers"])
+    assert any(d.get("supplier") == "Northwind Distributors" for d in fc["drivers"])
     cal = client.get("/cashflow/calendar", headers=demo_headers).json()
     assert cal["days"] and all("projected_balance" in d for d in cal["days"])
 
@@ -45,13 +45,13 @@ def test_cashflow_and_calendar(client, demo_headers):
 def test_recovery_reminder_and_send(client, demo_headers):
     pr = client.get("/recovery/priority", headers=demo_headers).json()
     names = [c["customer_name"] for c in pr["customers"]]
-    assert "Rahim Store" in names
-    rahim = next(c for c in pr["customers"] if c["customer_name"] == "Rahim Store")
+    assert "Harbor Market" in names
+    rahim = next(c for c in pr["customers"] if c["customer_name"] == "Harbor Market")
     inv = next(i for i in rahim["invoices"] if i["days_overdue"] == 10)
     r = client.post(f"/recovery/reminder/{inv['invoice_id']}", headers=demo_headers)
     assert r.status_code == 201, r.text
     rem = r.json()
-    assert rem["tone"] == "firm" and "Rahim Store" in rem["message"] and rem["status"] == "draft"
+    assert rem["tone"] == "firm" and "Harbor Market" in rem["message"] and rem["status"] == "draft"
     sent = client.post(f"/reminders/{rem['id']}/send", headers=demo_headers, json={"channel": "sms"}).json()
     assert sent["status"] == "sent"
 
@@ -128,9 +128,9 @@ def test_customer_phone_encrypted_at_rest(client, demo_headers):
     from app.db import engine
     with engine.connect() as conn:
         raw = conn.execute(text("select phone from customers limit 1")).scalar()
-    assert raw and not raw.startswith("017")
+    assert raw and not raw.startswith("555")
     profile = client.get("/customers", headers=demo_headers).json()[0]
-    assert profile["phone"].startswith("017")
+    assert profile["phone"].startswith("555")
 
 
 def test_lender_access_flow(client, demo_headers):
@@ -185,7 +185,7 @@ def test_agent_tool_loop_with_fake_llm(client, demo_headers, monkeypatch):
     from app.ai import providers
     seen = []
 
-    def fake_chat(messages, tools=None):
+    def fake_chat(messages, tools=None, mode="cloud"):
         seen.append(messages)
         tool_msgs = [m for m in messages if m["role"] == "tool"]
         if not tool_msgs:

@@ -1,23 +1,20 @@
 """Cash Advisor: one call for the gap card, forecast, collections, products, plan and AI advice."""
 
-from typing import Literal
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app import services
 from app.db import get_db
-from app.deps import ai_limiter, get_business
+from app.deps import ai_limiter, get_business, needs, require_owner
 from app.jobs import daily
 from app.models import Business
 
-router = APIRouter(tags=["cash advisor"])
+router = APIRouter(tags=["cash advisor"], dependencies=[Depends(require_owner), Depends(needs("advisor"))])
 
 
 @router.get("/cash-advisor/summary", dependencies=[Depends(ai_limiter)])
-def cash_advisor_summary(lang: Literal["en", "bn"] = "en", business: Business = Depends(get_business),
-                         db: Session = Depends(get_db)):
-    return services.advisor_summary(db, business, lang)
+def cash_advisor_summary(business: Business = Depends(get_business), db: Session = Depends(get_db)):
+    return services.advisor_summary(db, business)
 
 
 @router.post("/jobs/daily/run")

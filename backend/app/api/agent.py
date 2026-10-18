@@ -7,11 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.ai import agent, providers
 from app.db import get_db
-from app.deps import ai_limiter, get_business
+from app.deps import ai_limiter, get_business, needs, require_owner
 from app.models import Business, ChatMessage
 from app.schemas import ChatIn
 
-router = APIRouter(prefix="/agent", tags=["agent"])
+router = APIRouter(prefix="/agent", tags=["agent"], dependencies=[Depends(require_owner), Depends(needs("agent"))])
 
 SUGGESTED = [
     "Will I run short on cash next week?",
@@ -68,4 +68,4 @@ def history(business: Business = Depends(get_business), db: Session = Depends(ge
 
 @router.get("/suggestions")
 def suggestions(business: Business = Depends(get_business)):
-    return {"questions": SUGGESTED, "llm_configured": providers.any_configured()}
+    return {"questions": SUGGESTED, "llm_configured": providers.any_configured(business.ai_mode)}

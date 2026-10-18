@@ -1,7 +1,6 @@
-"""AI explanation layer (grounded, bn/en, template fallback) and the daily job with its alert."""
+"""AI explanation layer (grounded, template fallback) and the daily job with its alert."""
 
 import json
-import re
 from datetime import datetime
 
 import pytest
@@ -11,7 +10,7 @@ from app.ai.tools import Aliaser
 from app.jobs import scheduler
 
 FACTS = {
-    "currency": "BDT",
+    "currency": "USD",
     "cash": {"balance_today": 65000, "safety_threshold": 20000, "lowest_balance_next_30_days": -121618,
              "lowest_balance_date": "2026-11-06"},
     "cash_gap": {"first_short_date": "2026-10-26", "short_by_on_that_date": 12003,
@@ -21,7 +20,7 @@ FACTS = {
                                "days_to_impact": 7, "risk": "low"}]},
     "top_collections": [{"customer": "Customer C2", "owes": 39995, "days_overdue": 45,
                          "chance_pays_within_7_days_pct": 92, "suggested_action": "Call today"}],
-    "products": {"stars": ["Mustard Oil 1L"], "dead_stock": ["Glass Jar Set"],
+    "products": {"stars": ["Sunflower Oil 1L"], "dead_stock": ["Glass Jar Set"],
                  "cash_stuck_in_slow_and_dead_stock": 96240, "cash_freed_if_cleared": 58380,
                  "spare_cash_for_scaling_up": 0},
 }
@@ -30,7 +29,7 @@ FACTS = {
 @pytest.fixture
 def alias():
     a = Aliaser()
-    a.customer(2, "Hasan Enterprise")
+    a.customer(2, "Summit Wholesale")
     return a
 
 
@@ -40,87 +39,69 @@ def clear_cache():
 
 
 def fake_llm(monkeypatch, text, provider="fake"):
-    monkeypatch.setattr(providers, "chat", lambda messages, tools=None: providers.LLMResult(text=text, provider=provider))
+    monkeypatch.setattr(providers, "chat", lambda messages, tools=None, mode="cloud": providers.LLMResult(text=text, provider=provider))
 
 
 def test_template_summary_english():
-    text = explainer.template_summary(FACTS, "en")
-    assert "BDT 12,003" in text and "Oct 26" in text and "BDT 141,618" in text and "Customer C2" in text
-
-
-def test_template_summary_bangla_uses_bangla_digits():
-    text = explainer.template_summary(FACTS, "bn")
-    assert "১২,০০৩ টাকা" in text and "২৬ অক্টোবর" in text and "১,৪১,৬১৮" not in text
-    assert not re.search(r"[0-9]", text.replace("C2", ""))  # every figure in Bangla digits
+    text = explainer.template_summary(FACTS)
+    assert "$12,003" in text and "Oct 26" in text and "$141,618" in text and "Customer C2" in text
 
 
 def test_template_summary_without_gap():
     facts = {**FACTS, "cash_gap": None, "plan": {**FACTS["plan"], "needed_steps": []}}
-    assert "No cash shortage" in explainer.template_summary(facts, "en")
+    assert "No cash shortage" in explainer.template_summary(facts)
 
 
 def test_grounded_answer_is_used_and_names_restored(monkeypatch, alias):
-    fake_llm(monkeypatch, "Cash may fall BDT 12,003 short on Oct 26. Call Customer C2 about BDT 39,995 first.")
-    r = explainer.explain(FACTS, "en", alias, "k")
+    fake_llm(monkeypatch, "Cash may fall $12,003 short on Oct 26. Call Customer C2 about $39,995 first.")
+    r = explainer.explain(FACTS, alias, "k")
     assert r["generated_by"] == "fake" and not r["llm_rejected"]
-    assert "Hasan Enterprise" in r["text"] and "Customer C2" not in r["text"]
+    assert "Summit Wholesale" in r["text"] and "Customer C2" not in r["text"]
 
 
 def test_invented_number_is_rejected(monkeypatch, alias):
-    fake_llm(monkeypatch, "You will be short by BDT 55,000 next week.")  # 55,000 is not in the facts
-    r = explainer.explain(FACTS, "en", alias, "k")
+    fake_llm(monkeypatch, "You will be short by $55,000 next week.")  # 55,000 is not in the facts
+    r = explainer.explain(FACTS, alias, "k")
     assert r["generated_by"] == "template" and r["llm_rejected"]
-    assert "12,003" in r["text"] and "Hasan Enterprise" in r["text"]
-
-
-def test_bangla_answer_with_bangla_digits_is_checked(monkeypatch, alias):
-    fake_llm(monkeypatch, "২৬ অক্টোবর নগদ ১২,০০৩ টাকা কম পড়তে পারে। কাস্টমার C2-এর কাছ থেকে ৩৯,৯৯৫ টাকা আদায় করুন।")
-    good = explainer.explain(FACTS, "bn", alias, "k")
-    assert good["generated_by"] == "fake" and "Hasan Enterprise" in good["text"]
-    explainer._cache.clear()
-    fake_llm(monkeypatch, "আপনার ৭৭,৭৭৭ টাকা লাগবে।")  # invented
-    assert explainer.explain(FACTS, "bn", alias, "k")["generated_by"] == "template"
+    assert "12,003" in r["text"] and "Summit Wholesale" in r["text"]
 
 
 def test_mistyped_digit_is_rejected(monkeypatch, alias):
-    fake_llm(monkeypatch, "Collect ৩৯,৯৫৫ টাকা from কাস্টমার C2.")  # real figure is 39,995
-    assert explainer.explain(FACTS, "bn", alias, "k")["llm_rejected"]
+    fake_llm(monkeypatch, "Collect $39,955 from Customer C2.")  # real figure is 39,995
+    assert explainer.explain(FACTS, alias, "k")["llm_rejected"]
     explainer._cache.clear()
-    fake_llm(monkeypatch, "You may be about BDT 12,000 short on Oct 26.")  # plain rounding is fine
-    assert explainer.explain(FACTS, "en", alias, "k")["generated_by"] == "fake"
+    fake_llm(monkeypatch, "You may be about $12,000 short on Oct 26.")  # plain rounding is fine
+    assert explainer.explain(FACTS, alias, "k")["generated_by"] == "fake"
 
 
 def test_no_llm_falls_back_to_template(monkeypatch, alias):
-    def unavailable(messages, tools=None):
+    def unavailable(messages, tools=None, mode="cloud"):
         raise providers.NoLLMAvailable("none")
     monkeypatch.setattr(providers, "chat", unavailable)
-    r = explainer.explain(FACTS, "en", alias, "k")
+    r = explainer.explain(FACTS, alias, "k")
     assert r["generated_by"] == "template" and not r["llm_rejected"]
 
 
 def test_answers_are_cached(monkeypatch, alias):
     calls = []
 
-    def counting(messages, tools=None):
+    def counting(messages, tools=None, mode="cloud"):
         calls.append(1)
-        return providers.LLMResult(text="Cash may fall BDT 12,003 short.", provider="fake")
+        return providers.LLMResult(text="Cash may fall $12,003 short.", provider="fake")
     monkeypatch.setattr(providers, "chat", counting)
-    explainer.explain(FACTS, "en", alias, "k")
-    explainer.explain(FACTS, "en", alias, "k")
+    explainer.explain(FACTS, alias, "k")
+    explainer.explain(FACTS, alias, "k")
     assert len(calls) == 1
 
 
 def test_advisor_summary_api(client, demo_headers):
-    en = client.get("/cash-advisor/summary?lang=en", headers=demo_headers).json()
-    assert en["advice"]["text"] and en["advice"]["lang"] == "en"
+    en = client.get("/cash-advisor/summary", headers=demo_headers).json()
+    assert en["advice"]["text"] and en["advice"]["generated_by"]
     assert en["gap_card"]["first_shortage"] and len(en["forecast"]) == 30
     assert en["plan"]["actions"] and en["products"]["items"] and en["collections"]
     facts = json.dumps(en["facts"])
     for c in en["collections"]:
         assert c["customer_name"] not in facts  # real names never go into the LLM input
-    bn = client.get("/cash-advisor/summary?lang=bn", headers=demo_headers).json()
-    assert "টাকা" in bn["advice"]["text"] and bn["advice"]["lang"] == "bn"
-    assert client.get("/cash-advisor/summary?lang=fr", headers=demo_headers).status_code == 422
 
 
 def test_daily_job_alerts_once_a_day(client, demo_headers):

@@ -174,11 +174,22 @@ def build_providers() -> list:
     return out
 
 
-def chat(messages: list[dict], tools: list[dict] | None = None) -> LLMResult:
-    """Try each configured provider in order; fall through on rate limits or errors."""
-    providers = build_providers()
+def usable_providers(mode: str = "cloud") -> list:
+    """Providers allowed for an owner's AI mode: cloud = any configured one, local = only a model on this server,
+    off = none."""
+    if mode == "off":
+        return []
+    found = build_providers()
+    return [p for p in found if p.name == "ollama"] if mode == "local" else found
+
+
+def chat(messages: list[dict], tools: list[dict] | None = None, mode: str = "cloud") -> LLMResult:
+    """Try each allowed provider in order; fall through on rate limits or errors."""
+    providers = usable_providers(mode)
     if not providers:
-        raise NoLLMAvailable("No free LLM provider is configured")
+        raise NoLLMAvailable("AI is switched off" if mode == "off" else
+                             "No local model is available" if mode == "local" else
+                             "No free LLM provider is configured")
     errors = []
     for p in providers:
         try:
@@ -189,12 +200,12 @@ def chat(messages: list[dict], tools: list[dict] | None = None) -> LLMResult:
     raise NoLLMAvailable("; ".join(errors))
 
 
-def any_configured() -> bool:
-    return bool(build_providers())
+def any_configured(mode: str = "cloud") -> bool:
+    return bool(usable_providers(mode))
 
 
-def gemini_for_vision() -> GeminiProvider | None:
-    for p in build_providers():
+def gemini_for_vision(mode: str = "cloud") -> GeminiProvider | None:
+    for p in usable_providers(mode if mode == "cloud" else "off"):  # reading images is hosted-only
         if isinstance(p, GeminiProvider):
             return p
     return None

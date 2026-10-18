@@ -20,6 +20,7 @@ class LoginIn(BaseModel):
     # Plain string: a badly formatted email just fails as "wrong email or password".
     email: str = Field(min_length=1, max_length=255)
     password: str = Field(max_length=128)
+    code: str | None = Field(default=None, max_length=12)  # two-factor code, when it is switched on
 
 
 class TokenOut(BaseModel):
@@ -32,6 +33,8 @@ class UserOut(ORM):
     id: int
     name: str
     email: str
+    role: str = "owner"
+    totp_enabled: bool = False
 
 
 class OnboardingIn(BaseModel):
@@ -40,7 +43,7 @@ class OnboardingIn(BaseModel):
     started_at: date
     opening_balance: float = Field(default=0, ge=-1e10, le=1e10)
     cash_threshold: float = Field(default=0, ge=0, le=1e10)
-    currency: str = Field(default="BDT", max_length=8)
+    currency: str = Field(default="USD", max_length=8)
 
 
 class BusinessOut(ORM):
@@ -52,6 +55,7 @@ class BusinessOut(ORM):
     cash_threshold: float
     currency: str
     reminder_tone: str
+    ai_mode: str = "cloud"
 
 
 # Transactions
@@ -209,6 +213,7 @@ class SettingsIn(BaseModel):
     type: str | None = Field(default=None, max_length=80)
     cash_threshold: float | None = Field(default=None, ge=0, le=1e10)
     reminder_tone: Literal["auto", "friendly", "firm", "final"] | None = None
+    ai_mode: Literal["cloud", "local", "off"] | None = None
     currency: str | None = Field(default=None, max_length=8)
 
 

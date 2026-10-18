@@ -8,9 +8,9 @@ from app import services
 from app.ai import templates
 from app.ai.text import polish_reminder
 from app.db import get_db
-from app.deps import ai_limiter, audit, get_business, owned
+from app.deps import ai_limiter, audit, get_business, get_current_user, needs, owned
 from app.engines.recovery import tone_for
-from app.models import (Bill, Business, Customer, Invoice, InvoicePayment, Reminder, Supplier, Transaction,
+from app.models import (Bill, Business, Customer, Invoice, InvoicePayment, Reminder, Supplier, Transaction, User,
                         utcnow)
 from app.schemas import (BillIn, BillOut, InvoiceIn, InvoiceOut, InvoicePaymentIn, PayIn, ReminderOut, ReminderSendIn,
                          SupplierIn, SupplierOut)
@@ -96,7 +96,7 @@ def add_invoice_payment(invoice_id: int, body: InvoicePaymentIn, business: Busin
     return inv
 
 
-@router.get("/recovery/priority")
+@router.get("/recovery/priority", dependencies=[Depends(needs("collections"))])
 def recovery_priority(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     ranked = services.recovery_priority(db, business)
     return {"currency": business.currency, "total_outstanding": sum(r["outstanding"] for r in ranked),
@@ -104,8 +104,8 @@ def recovery_priority(business: Business = Depends(get_business), db: Session = 
 
 
 @router.post("/recovery/reminder/{invoice_id}", response_model=ReminderOut, status_code=201,
-             dependencies=[Depends(ai_limiter)])
-def draft_reminder(invoice_id: int, polish: bool = True, lang: str = Query("en", pattern="^(en|bn)$"),
+             dependencies=[Depends(ai_limiter), Depends(needs("collections"))])
+def draft_reminder(invoice_id: int, polish: bool = True,
                    business: Business = Depends(get_business), db: Session = Depends(get_db)):
     """Draft a reminder for one invoice. It is saved as a draft and never sent automatically."""
     inv = owned(db, Invoice, invoice_id, business)
@@ -115,10 +115,10 @@ def draft_reminder(invoice_id: int, polish: bool = True, lang: str = Query("en",
     tone = tone_for(days) if business.reminder_tone == "auto" else business.reminder_tone
     text = templates.reminder(tone, customer=inv.customer.name, business=business.name,
                               amount=round(inv.outstanding), currency=business.currency,
-                              due_date=inv.due_date.isoformat(), days=days, lang=lang)
+                              due_date=inv.due_date.isoformat(), days=days)
     generated_by = "template"
-    if polish and lang == "en":
-        text, generated_by = polish_reminder(text, tone, inv.customer.name, business.name)
+    if polish:
+        text, generated_by = polish_reminder(text, tone, inv.customer.name, business.name, business.ai_mode)
     r = Reminder(business_id=business.id, invoice_id=inv.id, message=text, tone=tone, generated_by=generated_by)
     db.add(r)
     db.commit()
@@ -133,7 +133,7 @@ def list_reminders(business: Business = Depends(get_business), db: Session = Dep
 
 @router.post("/reminders/{reminder_id}/send", response_model=ReminderOut)
 def send_reminder(reminder_id: int, body: ReminderSendIn, business: Business = Depends(get_business),
-                  db: Session = Depends(get_db)):
+                  user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """The owner's explicit confirmation. Delivery is mocked; plug in an SMS/WhatsApp gateway here."""
     r = owned(db, Reminder, reminder_id, business)
     if body.message:
@@ -142,7 +142,7 @@ def send_reminder(reminder_id: int, body: ReminderSendIn, business: Business = D
     r.status = "sent"
     r.sent_at = utcnow()
     db.commit()
-    audit(db, "reminder_sent", business.owner.email, business_id=business.id, target=f"reminder:{r.id}")
+    audit(db, "reminder_sent", user.email, business_id=business.id, user_id=user.id, target=f"reminder:{r.id}")
     return r
 
 

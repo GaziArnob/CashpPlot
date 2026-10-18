@@ -22,6 +22,12 @@ class User(Base):
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    role: Mapped[str] = mapped_column(String(10), default="owner", server_default="owner")  # owner | staff
+    # Staff work inside the owner's business: this is the business they belong to (owners use Business.user_id).
+    employer_business_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    totp_secret: Mapped[str | None] = mapped_column(EncryptedString(255), nullable=True)  # two-factor key
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     businesses: Mapped[list["Business"]] = relationship(back_populates="owner")
 
@@ -46,8 +52,13 @@ class Business(Base):
     started_at: Mapped[date] = mapped_column(Date)
     opening_balance: Mapped[float] = mapped_column(Float, default=0.0)
     cash_threshold: Mapped[float] = mapped_column(Float, default=0.0)
-    currency: Mapped[str] = mapped_column(String(8), default="BDT")
+    currency: Mapped[str] = mapped_column(String(8), default="USD")
     reminder_tone: Mapped[str] = mapped_column(String(20), default="auto")  # auto | friendly | firm | final
+    plan: Mapped[str] = mapped_column(String(10), default="free", server_default="free")  # free | pro
+    plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # end of a trial, if any
+    # Where AI text may be produced: cloud = free hosted models (names masked), local = only a model on this
+    # server, off = templates only.
+    ai_mode: Mapped[str] = mapped_column(String(10), default="cloud", server_default="cloud")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     owner: Mapped[User] = relationship(back_populates="businesses")
@@ -257,6 +268,32 @@ class LenderAccess(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class LenderReferral(Base):
+    """An introduction to a lender that the owner asked for and consented to.
+
+    Records only what was shared (a score snapshot and the amount sought), so partner lenders can be
+    counted per lead. It does not contact the lender by itself; the owner records the outcome.
+    """
+
+    __tablename__ = "lender_referrals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), index=True)
+    loan_product_id: Mapped[int | None] = mapped_column(ForeignKey("loan_products.id", ondelete="SET NULL"),
+                                                        nullable=True)
+    lender_name: Mapped[str] = mapped_column(String(160))
+    product_name: Mapped[str] = mapped_column(String(160))
+    requested_amount: Mapped[float] = mapped_column(Float)
+    score_snapshot: Mapped[int] = mapped_column(Integer)
+    band_snapshot: Mapped[str] = mapped_column(String(30))
+    shared_fields: Mapped[list] = mapped_column(JSON)  # what the owner agreed to share
+    status: Mapped[str] = mapped_column(String(12), default="submitted")  # submitted|contacted|funded|declined|withdrawn
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    consent_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class RecurringExpense(Base):
     """Fixed monthly payables (salary, rent, utilities) placed on their exact day in the forecast."""
 
@@ -442,7 +479,7 @@ class NegotiationDraft(Base):
     business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), index=True)
     bill_id: Mapped[int] = mapped_column(ForeignKey("bills.id", ondelete="CASCADE"), index=True)
     plan_id: Mapped[int | None] = mapped_column(ForeignKey("payment_plans.id", ondelete="SET NULL"), nullable=True)
-    lang: Mapped[str] = mapped_column(String(2))  # en | bn
+    lang: Mapped[str] = mapped_column(String(2))  # always en for now
     message: Mapped[str] = mapped_column(Text)
     generated_by: Mapped[str] = mapped_column(String(30), default="template")
     status: Mapped[str] = mapped_column(String(12), default="draft")  # draft | marked_sent

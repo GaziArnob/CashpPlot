@@ -19,12 +19,12 @@ from sqlalchemy.orm import Session
 from app import services
 from app.ai import negotiation
 from app.db import get_db
-from app.deps import ai_limiter, audit, get_business, get_current_user, owned
+from app.deps import ai_limiter, audit, get_business, get_current_user, needs, owned, require_owner
 from app.engines import payables
 from app.models import (Bill, Business, NegotiationDraft, PayablesRecommendation, PaymentPlan,
                         PaymentPlanInstallment, Supplier, Transaction, User, utcnow)
 
-router = APIRouter(tags=["payables"])
+router = APIRouter(tags=["payables"], dependencies=[Depends(require_owner), Depends(needs("payables"))])
 
 MAX_INSTALLMENTS = 12
 MAX_DAYS_AHEAD = 365
@@ -284,7 +284,6 @@ def installment_paid(installment_id: int, body: InstallmentPaidIn, business: Bus
 class DraftIn(BaseModel):
     bill_id: int
     plan_id: int | None = None
-    lang: Literal["en", "bn"] = "en"
     polish: bool = True
 
 
@@ -293,7 +292,7 @@ class DraftEdit(BaseModel):
 
 
 def _draft_out(d: NegotiationDraft) -> dict:
-    return {"id": d.id, "bill_id": d.bill_id, "plan_id": d.plan_id, "lang": d.lang, "message": d.message,
+    return {"id": d.id, "bill_id": d.bill_id, "plan_id": d.plan_id, "lang": "en", "message": d.message,
             "generated_by": d.generated_by, "status": d.status, "created_at": d.created_at,
             "updated_at": d.updated_at, "sent_by_app": False,
             "note": "A draft only. The app never sends it; copy it and send it yourself."}
@@ -313,11 +312,11 @@ def create_draft(body: DraftIn, business: Business = Depends(get_business), db: 
         kind = "extension"
     profile = services.supplier_profiles(db, business, services.load(db, business)).get(bill.supplier_id, {})
     message, by = negotiation.generate(
-        kind, body.lang, polish=body.polish, supplier=bill.supplier.name, business=business.name,
+        kind, polish=body.polish, mode=business.ai_mode, supplier=bill.supplier.name, business=business.name,
         currency=business.currency, amount=bill.outstanding, due_date=bill.due_date.isoformat(),
         installments=installments, on_time_rate=profile.get("on_time_rate"))
     draft = NegotiationDraft(business_id=business.id, bill_id=bill.id, plan_id=plan.id if plan else None,
-                             lang=body.lang, message=message, generated_by=f"{by}:{body.lang}")
+                             lang="en", message=message, generated_by=by)
     db.add(draft)
     db.commit()
     return _draft_out(draft)

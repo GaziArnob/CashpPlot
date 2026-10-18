@@ -5,7 +5,7 @@ Demo login: demo@example.com / Demo@12345
 
 What the data is built to show:
 - A cash shortage of about 12,000 nine days ahead (a large supplier bill).
-- Rahim Store 10 days overdue, Hasan Enterprise 45 days overdue, Kabir & Sons paying in parts,
+- Harbor Market 10 days overdue, Summit Wholesale 45 days overdue, Parker & Sons paying in parts,
   a brand-new customer with no history.
 - Products in every class: stars, cash cows, slow movers, dead stock, and a new product with no sales.
 - Every sale is recorded per product: cash lines roll up into the day's "Sales" transaction,
@@ -35,14 +35,14 @@ SHORTAGE_DAY = 9
 # name, sku, unit cost, unit price, mean units sold per day, profile
 # profile: star | cow | slow | dead:<days since last sale> | new
 PRODUCTS = [
-    ("Premium Basmati Rice 5kg", "RICE-B5", 560, 760, 9.0, "star"),
-    ("Mustard Oil 1L", "OIL-M1", 185, 255, 14.0, "star"),
+    ("Premium Rice 5kg", "RICE-B5", 560, 760, 9.0, "star"),
+    ("Sunflower Oil 1L", "OIL-M1", 185, 255, 14.0, "star"),
     ("Spice Mix Pack", "SPC-MX", 75, 125, 20.0, "star"),
     ("Sugar 1kg", "SUG-1", 118, 127, 25.0, "cow"),
-    ("Masoor Dal 1kg", "DAL-M1", 128, 141, 18.0, "cow"),
+    ("Red Lentils 1kg", "DAL-M1", 128, 141, 18.0, "cow"),
     ("Soybean Oil 5L", "OIL-S5", 820, 870, 6.0, "cow"),
-    ("Atta 2kg", "ATT-2", 105, 117, 12.0, "cow"),
-    ("Pure Ghee 500g", "GHE-5", 520, 650, 0.5, "slow"),
+    ("Wheat Flour 2kg", "ATT-2", 105, 117, 12.0, "cow"),
+    ("Clarified Butter 500g", "GHE-5", 520, 650, 0.5, "slow"),
     ("Baby Formula 400g", "BBF-4", 760, 850, 0.4, "slow"),
     ("Premium Dates 1kg", "DAT-1", 900, 1150, 0.3, "slow"),
     ("Imported Olive Oil 1L", "OIL-O1", 1050, 1350, 0.4, "dead:80"),
@@ -51,28 +51,28 @@ PRODUCTS = [
 ]
 STOCK_DAYS = {"star": 7, "cow": 7, "slow": 60}   # restock target, in days of demand
 START_STOCK_DAYS = {"star": 10, "cow": 10, "slow": 150, "dead": 400}
-CREDIT_PRODUCTS = ["Sugar 1kg", "Masoor Dal 1kg", "Soybean Oil 5L", "Atta 2kg", "Mustard Oil 1L",
-                   "Premium Basmati Rice 5kg"]
+CREDIT_PRODUCTS = ["Sugar 1kg", "Red Lentils 1kg", "Soybean Oil 5L", "Wheat Flour 2kg", "Sunflower Oil 1L",
+                   "Premium Rice 5kg"]
 
 CUSTOMERS = [
     # name, phone, behavior, typical invoice
-    ("Rahim Store", "01710000001", "slow", 15_000),
-    ("Hasan Enterprise", "01710000002", "bad", 22_000),
-    ("Nadia Mart", "01710000003", "good", 9_000),
-    ("Bismillah Traders", "01710000004", "good", 12_000),
-    ("Sumon Grocery", "01710000005", "slow", 7_000),
-    ("Lima Super Shop", "01710000006", "good", 18_000),
-    ("Kabir & Sons", "01710000007", "partial", 11_000),
-    ("Green Valley Restaurant", "01710000008", "good", 14_000),
-    ("Joy Bakery", "01710000009", "bad", 6_000),
-    ("Rupa General Store", "01710000010", "good", 8_000),
+    ("Harbor Market", "555-0001", "slow", 15_000),
+    ("Summit Wholesale", "555-0002", "bad", 22_000),
+    ("Maple Mart", "555-0003", "good", 9_000),
+    ("Bright Traders", "555-0004", "good", 12_000),
+    ("Corner Grocery", "555-0005", "slow", 7_000),
+    ("Lakeview Supermarket", "555-0006", "good", 18_000),
+    ("Parker & Sons", "555-0007", "partial", 11_000),
+    ("Green Valley Restaurant", "555-0008", "good", 14_000),
+    ("Joy Bakery", "555-0009", "bad", 6_000),
+    ("Ruby General Store", "555-0010", "good", 8_000),
 ]
 SUPPLIERS = [
     # name, phone, payment terms (days), early-pay discount % and window (days), late fee % per month
-    ("Meghna Distributors", "01810000001", 30, 2.0, 10, 1.5),
-    ("Fresh Foods Ltd", "01810000002", 15, None, None, 2.0),
-    ("City Packaging", "01810000003", 30, None, None, None),
-    ("Padma Oil Mills", "01810000004", 21, 1.0, 7, 1.0),
+    ("Northwind Distributors", "555-0001", 30, 2.0, 10, 1.5),
+    ("Fresh Foods Ltd", "555-0002", 15, None, None, 2.0),
+    ("City Packaging", "555-0003", 30, None, None, None),
+    ("Pioneer Oil Mills", "555-0004", 21, 1.0, 7, 1.0),
 ]
 # Demo financing products for comparisons. Clearly not real offers.
 FINANCING_OFFERS = [
@@ -164,12 +164,12 @@ def seed(today: date | None = None, rng_seed: int = 42) -> dict:
     reset_db()
     db = SessionLocal()
 
-    user = User(name="Karim Ahmed", email=DEMO_EMAIL, phone="01700000000", password_hash=hash_password(DEMO_PASSWORD))
+    user = User(name="Alex Morgan", email=DEMO_EMAIL, phone="555-0000", password_hash=hash_password(DEMO_PASSWORD))
     db.add(user)
     db.flush()
-    biz = Business(user_id=user.id, name="Karim Traders", type="Wholesale grocery",
+    biz = Business(user_id=user.id, name="Evergreen Traders", type="Wholesale grocery",
                    started_at=today - timedelta(days=4 * 365 + 40), opening_balance=0,
-                   cash_threshold=THRESHOLD, currency="BDT")
+                   cash_threshold=THRESHOLD, currency="USD", plan="pro")
     db.add(biz)
     db.flush()
     bid = biz.id
@@ -290,17 +290,17 @@ def seed(today: date | None = None, rng_seed: int = 42) -> dict:
             issue += timedelta(days=rng.randint(20, 35))
 
     # The demo story.
-    rahim = credit_invoice(customers["Rahim Store"], today - timedelta(days=25), today - timedelta(days=10), 15_000)
+    rahim = credit_invoice(customers["Harbor Market"], today - timedelta(days=25), today - timedelta(days=10), 15_000)
     rahim.note = "Festival order"
-    credit_invoice(customers["Hasan Enterprise"], today - timedelta(days=60), today - timedelta(days=45), 22_000)
-    kabir = credit_invoice(customers["Kabir & Sons"], today - timedelta(days=30), today - timedelta(days=15), 12_000)
+    credit_invoice(customers["Summit Wholesale"], today - timedelta(days=60), today - timedelta(days=45), 22_000)
+    kabir = credit_invoice(customers["Parker & Sons"], today - timedelta(days=30), today - timedelta(days=15), 12_000)
     pay(kabir, today - timedelta(days=12), kabir.amount * 0.4)  # paid 40%, the rest still open
-    for name, days_ahead, amount in [("Lima Super Shop", 6, 18_500), ("Nadia Mart", 12, 9_200),
-                                     ("Green Valley Restaurant", 18, 14_000), ("Bismillah Traders", 24, 12_300)]:
+    for name, days_ahead, amount in [("Lakeview Supermarket", 6, 18_500), ("Maple Mart", 12, 9_200),
+                                     ("Green Valley Restaurant", 18, 14_000), ("Bright Traders", 24, 12_300)]:
         issue = min(today + timedelta(days=days_ahead - 15), today - timedelta(days=rng.randint(2, 9)))  # past only
         credit_invoice(customers[name], issue, today + timedelta(days=days_ahead), amount)
     # A brand-new customer: one open invoice, no payment history at all.
-    fresh = Customer(business_id=bid, name="Fresh Mart", phone="01710000011",
+    fresh = Customer(business_id=bid, name="Fresh Mart", phone="555-0011",
                      created_at=datetime.combine(today - timedelta(days=5), datetime.min.time()))
     db.add(fresh)
     db.flush()
@@ -315,7 +315,7 @@ def seed(today: date | None = None, rng_seed: int = 42) -> dict:
         db.flush()
         supplier_ids[name] = s.id
     for k in range(1, 12):
-        for name, base in [("Fresh Foods Ltd", 9_000), ("City Packaging", 5_000), ("Padma Oil Mills", 7_000)]:
+        for name, base in [("Fresh Foods Ltd", 9_000), ("City Packaging", 5_000), ("Pioneer Oil Mills", 7_000)]:
             due = add_months(start, k).replace(day=20)
             if due >= today:
                 continue
@@ -324,7 +324,7 @@ def seed(today: date | None = None, rng_seed: int = 42) -> dict:
             db.add(Bill(business_id=bid, supplier_id=supplier_ids[name], amount=amount, due_date=due,
                         paid_date=paid, status="paid"))
             txn(paid, amount, "expense", "Bill payment", f"Bill from {name}", "system")
-    for name, days_ahead, amount in [("City Packaging", 4, 5_200), ("Padma Oil Mills", 16, 7_400),
+    for name, days_ahead, amount in [("City Packaging", 4, 5_200), ("Pioneer Oil Mills", 16, 7_400),
                                      ("Fresh Foods Ltd", 22, 9_800)]:
         db.add(Bill(business_id=bid, supplier_id=supplier_ids[name], amount=amount,
                     due_date=today + timedelta(days=days_ahead), status="unpaid"))
@@ -377,13 +377,22 @@ def seed(today: date | None = None, rng_seed: int = 42) -> dict:
     biz.opening_balance = round(TARGET_BALANCE - (data.balance_on(today) - data.opening_balance))
     db.commit()
 
-    # Add the large supplier bill that creates a shortage of about SHORTAGE_GAP on day SHORTAGE_DAY.
+    # Add the large supplier bill that creates a shortage of about SHORTAGE_GAP, around SHORTAGE_DAY days out.
+    # The story needs the bill itself to cause the first shortage, so pick the latest day (SHORTAGE_DAY or
+    # earlier) where cash is still comfortably above the safety level the day before; that keeps the demo
+    # right whatever day of the month it is seeded on (fixed rent, salaries and drawings land on fixed dates).
     data = engine_data.load(db, biz)
     fc = forecast_engine.forecast(data, today, 30)
-    balance_day = fc["series"][SHORTAGE_DAY - 1]["balance"]
-    big_bill = max(20_000, round(balance_day - THRESHOLD + SHORTAGE_GAP, -2))
-    db.add(Bill(business_id=bid, supplier_id=supplier_ids["Meghna Distributors"], amount=big_bill,
-                due_date=today + timedelta(days=SHORTAGE_DAY), status="unpaid", note="Festival stock order"))
+    series = fc["series"]
+    chosen_day, big_bill = SHORTAGE_DAY, 20_000
+    for day in range(SHORTAGE_DAY, 2, -1):
+        before_ok = all(r["balance"] > THRESHOLD + SHORTAGE_GAP for r in series[:day - 1])
+        room = series[day - 1]["balance"] - THRESHOLD + SHORTAGE_GAP
+        if before_ok and room >= 10_000:
+            chosen_day, big_bill = day, round(room, -2)
+            break
+    db.add(Bill(business_id=bid, supplier_id=supplier_ids["Northwind Distributors"], amount=big_bill,
+                due_date=today + timedelta(days=chosen_day), status="unpaid", note="Festival stock order"))
     db.commit()
 
     # Monthly credit score history for the trend chart.

@@ -40,11 +40,11 @@ function Receivables() {
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  async function makeDraft(c: RecoveryCustomer, lang: "en" | "bn") {
-    setBusy(`${c.customer_id}:${lang}`);
+  async function makeDraft(c: RecoveryCustomer) {
+    setBusy(String(c.customer_id));
     setActionError(null);
     try {
-      const reminder = await api<Reminder>(`/collections/${c.customer_id}/reminder?lang=${lang}`, { method: "POST" });
+      const reminder = await api<Reminder>(`/collections/${c.customer_id}/reminder`, { method: "POST" });
       setDraft({ reminder, customer: c.customer_name });
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Could not draft a reminder");
@@ -122,13 +122,10 @@ function Receivables() {
                 </td>
                 <td className="px-5 py-3">
                   <div className="flex justify-end gap-1.5">
-                    {(["en", "bn"] as const).map((lang) => (
-                      <Button key={lang} variant="secondary" onClick={() => makeDraft(c, lang)}
-                        disabled={busy !== null} className="px-2.5">
-                        <MessageSquareText className="size-4" />
-                        {busy === `${c.customer_id}:${lang}` ? "…" : lang === "en" ? "EN" : "বাংলা"}
-                      </Button>
-                    ))}
+                    <Button variant="secondary" onClick={() => makeDraft(c)} disabled={busy !== null} className="px-2.5">
+                      <MessageSquareText className="size-4" />
+                      {busy === String(c.customer_id) ? "…" : "Draft reminder"}
+                    </Button>
                   </div>
                 </td>
               </tr>

@@ -2,19 +2,21 @@
 
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import services
 from app.ai import templates
 from app.db import get_db
-from app.deps import get_business, owned
+from app import plans
+from app.deps import get_business, needs, owned, require_owner
 from app.engines.loan import DISCLAIMER, emi
 from app.models import Business, CreditScore, Loan, Notification, Repayment, Transaction
 from app.schemas import LoanIn, PayIn, WhatIfIn
 
-router = APIRouter(tags=["finance"])
+router = APIRouter(tags=["finance"], dependencies=[Depends(require_owner)])
+CREDIT = [Depends(needs("credit"))]
 
 
 def _add_months(d: date, months: int) -> date:
@@ -63,12 +65,18 @@ def dashboard(business: Business = Depends(get_business), db: Session = Depends(
 @router.get("/cashflow/forecast")
 def cash_forecast(days: int = Query(30, ge=7, le=90), business: Business = Depends(get_business),
                   db: Session = Depends(get_db)):
+    if days > plans.FREE_FORECAST_DAYS and not plans.can_use(business, "forecast_long"):
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
+                            f"Upgrade to Pro to use this: {plans.PRO_FEATURES['forecast_long']}")
     return services.cash_forecast(db, business, days)
 
 
 @router.get("/cashflow/calendar")
 def cash_calendar(days: int = Query(30, ge=7, le=90), business: Business = Depends(get_business),
                   db: Session = Depends(get_db)):
+    if days > plans.FREE_FORECAST_DAYS and not plans.can_use(business, "forecast_long"):
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
+                            f"Upgrade to Pro to use this: {plans.PRO_FEATURES['forecast_long']}")
     fc = services.cash_forecast(db, business, days)
     data = services.load(db, business)
     by_day: dict[str, dict] = {}
@@ -87,38 +95,38 @@ def cash_calendar(days: int = Query(30, ge=7, le=90), business: Business = Depen
     return {"days": [by_day[k] for k in sorted(by_day)], "currency": business.currency}
 
 
-@router.get("/credit-score")
+@router.get("/credit-score", dependencies=CREDIT)
 def credit_score(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     return services.credit_score(db, business)
 
 
-@router.get("/credit-score/history")
+@router.get("/credit-score/history", dependencies=CREDIT)
 def credit_history(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     rows = db.scalars(select(CreditScore).where(CreditScore.business_id == business.id)
                       .order_by(CreditScore.calculated_at)).all()
     return [{"date": r.calculated_at.date().isoformat(), "score": r.score, "band": r.band} for r in rows]
 
 
-@router.get("/loan/readiness")
+@router.get("/loan/readiness", dependencies=CREDIT)
 def loan_readiness(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     r = services.loan_recommendation(db, business)
     return {k: r[k] for k in ("ready", "score", "band", "safe_monthly_installment", "max_recommended_amount",
                               "capacity", "checklist", "disclaimer")}
 
 
-@router.get("/loan/recommendations")
+@router.get("/loan/recommendations", dependencies=CREDIT)
 def loan_recommendations(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     r = services.loan_recommendation(db, business)
     return {"options": r["options"], "max_recommended_amount": r["max_recommended_amount"],
             "disclaimer": r["disclaimer"]}
 
 
-@router.post("/loan/what-if")
+@router.post("/loan/what-if", dependencies=CREDIT)
 def what_if(body: WhatIfIn, business: Business = Depends(get_business), db: Session = Depends(get_db)):
     return services.what_if(db, business, **body.model_dump())
 
 
-@router.get("/loans")
+@router.get("/loans", dependencies=CREDIT)
 def list_loans(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     out = []
     for loan in db.scalars(select(Loan).where(Loan.business_id == business.id).order_by(Loan.start_date.desc())):
@@ -133,7 +141,7 @@ def list_loans(business: Business = Depends(get_business), db: Session = Depends
     return out
 
 
-@router.post("/loans", status_code=201)
+@router.post("/loans", status_code=201, dependencies=CREDIT)
 def add_loan(body: LoanIn, business: Business = Depends(get_business), db: Session = Depends(get_db)):
     """Record an existing loan so its installments count in the forecast and credit score."""
     monthly = emi(body.principal, body.rate, body.tenure_months)
@@ -147,7 +155,7 @@ def add_loan(body: LoanIn, business: Business = Depends(get_business), db: Sessi
     return {"id": loan.id, "emi": round(monthly), "disclaimer": DISCLAIMER}
 
 
-@router.patch("/repayments/{repayment_id}/paid")
+@router.patch("/repayments/{repayment_id}/paid", dependencies=CREDIT)
 def pay_installment(repayment_id: int, body: PayIn | None = None, business: Business = Depends(get_business),
                     db: Session = Depends(get_db)):
     r = owned(db, Repayment, repayment_id, business)

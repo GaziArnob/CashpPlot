@@ -1,15 +1,18 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
 from app.deps import audit, auth_limiter, get_current_user
+from app import plans
 from app.models import Business, RefreshToken, User, utcnow
 from app.schemas import BusinessOut, LoginIn, OnboardingIn, SignupIn, TokenOut, UserOut
-from app.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
+from app.security import (create_access_token, create_refresh_token, decode_token, hash_password, new_totp_secret,
+                          totp_uri, verify_password, verify_totp)
 
 router = APIRouter(tags=["auth"])
 
@@ -49,6 +52,8 @@ def login(body: LoginIn, response: Response, db: Session = Depends(get_db)):
     now = utcnow()
     if user and user.locked_until and user.locked_until > now:
         raise HTTPException(status.HTTP_423_LOCKED, "Account temporarily locked after failed logins. Try later.")
+    if user is not None and not user.is_active:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong email or password")
     if user is None or not verify_password(body.password, user.password_hash):
         if user:
             user.failed_logins += 1
@@ -58,6 +63,17 @@ def login(body: LoginIn, response: Response, db: Session = Depends(get_db)):
             db.commit()
             audit(db, "login_failed", email, user_id=user.id)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong email or password")
+    if user.totp_enabled:
+        if not body.code:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Two-factor code required")
+        if not verify_totp(user.totp_secret or "", body.code):
+            user.failed_logins += 1
+            if user.failed_logins >= MAX_FAILED:
+                user.locked_until = now + timedelta(minutes=LOCK_MINUTES)
+                user.failed_logins = 0
+            db.commit()
+            audit(db, "two_factor_failed", email, user_id=user.id)
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid two-factor code")
     user.failed_logins = 0
     user.locked_until = None
     db.commit()
@@ -107,10 +123,59 @@ def me(user: User = Depends(get_current_user)):
 
 @router.post("/onboarding", response_model=BusinessOut, status_code=201)
 def onboarding(body: OnboardingIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.role != "owner":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the business owner can set up a business")
     if db.scalar(select(Business).where(Business.user_id == user.id)):
         raise HTTPException(status.HTTP_409_CONFLICT, "Business already set up; edit it in Settings")
     business = Business(user_id=user.id, **body.model_dump())
+    plans.start_trial(business)  # every new business starts with a Pro trial
     db.add(business)
     db.commit()
     audit(db, "onboarding", user.email, business_id=business.id, user_id=user.id)
     return business
+
+
+class CodeIn(BaseModel):
+    code: str = Field(min_length=6, max_length=12)
+
+
+class DisableIn(BaseModel):
+    password: str = Field(max_length=128)
+    code: str = Field(min_length=6, max_length=12)
+
+
+@router.post("/auth/2fa/setup")
+def two_factor_setup(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Start two-factor setup: returns a key to add to an authenticator app. It is not active until confirmed."""
+    if user.totp_enabled:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Two-factor authentication is already on")
+    user.totp_secret = new_totp_secret()
+    db.commit()
+    return {"secret": user.totp_secret, "otpauth_uri": totp_uri(user.totp_secret, user.email)}
+
+
+@router.post("/auth/2fa/enable")
+def two_factor_enable(body: CodeIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.totp_enabled:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Two-factor authentication is already on")
+    if not user.totp_secret:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Start setup first")
+    if not verify_totp(user.totp_secret, body.code):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "That code is not right. Check the time on your phone.")
+    user.totp_enabled = True
+    db.commit()
+    audit(db, "two_factor_enabled", user.email, user_id=user.id)
+    return {"enabled": True}
+
+
+@router.post("/auth/2fa/disable")
+def two_factor_disable(body: DisableIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Turning it off needs both the password and a current code."""
+    if not user.totp_enabled:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Two-factor authentication is not on")
+    if not verify_password(body.password, user.password_hash) or not verify_totp(user.totp_secret or "", body.code):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong password or code")
+    user.totp_enabled, user.totp_secret = False, None
+    db.commit()
+    audit(db, "two_factor_disabled", user.email, user_id=user.id)
+    return {"enabled": False}

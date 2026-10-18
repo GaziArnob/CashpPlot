@@ -64,13 +64,13 @@ def _tesseract(image_bytes: bytes) -> str | None:
         return None
 
 
-def scan(image_bytes: bytes, mime: str) -> dict:
+def scan(image_bytes: bytes, mime: str, mode: str = "cloud") -> dict:
     text = _tesseract(image_bytes)
     if text:
         result = parse_text(text)
         result["engine"] = "tesseract"
         return result
-    gemini = providers.gemini_for_vision()
+    gemini = providers.gemini_for_vision(mode)
     if gemini is None:
         raise OCRUnavailable("No free OCR available: install Tesseract (pytesseract) or set GEMINI_API_KEY")
     raw = gemini.read_image(GEMINI_PROMPT, base64.b64encode(image_bytes).decode(), mime)

@@ -9,8 +9,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app import services
-from app.db import get_db
-from app.deps import audit, get_business, get_current_user, owned
+from app.db import Base, get_db
+from app.deps import audit, get_business, get_current_user, needs, owned, require_owner
 from app.models import (Bill, Business, ChatMessage, CreditScore, Customer, Goal, Invoice, LenderAccess, Loan,
                         Notification, RefreshToken, Reminder, Repayment, Supplier, Transaction, User, utcnow)
 from app.schemas import BusinessOut, LenderAccessIn, SettingsIn
@@ -27,7 +27,7 @@ def get_settings_(business: Business = Depends(get_business)):
     return business
 
 
-@router.put("/settings", response_model=BusinessOut)
+@router.put("/settings", response_model=BusinessOut, dependencies=[Depends(require_owner)])
 def update_settings(body: SettingsIn, business: Business = Depends(get_business), db: Session = Depends(get_db)):
     changes = body.model_dump(exclude_none=True)
     for k, v in changes.items():
@@ -37,7 +37,7 @@ def update_settings(body: SettingsIn, business: Business = Depends(get_business)
     return business
 
 
-@router.get("/lender-access")
+@router.get("/lender-access", dependencies=[Depends(require_owner), Depends(needs("lender_access"))])
 def list_lender_access(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     rows = db.scalars(select(LenderAccess).where(LenderAccess.business_id == business.id)
                       .order_by(LenderAccess.granted_at.desc())).all()
@@ -46,7 +46,7 @@ def list_lender_access(business: Business = Depends(get_business), db: Session =
              "expires_at": r.expires_at, "active": r.revoked_at is None and r.expires_at > now} for r in rows]
 
 
-@router.post("/lender-access", status_code=201)
+@router.post("/lender-access", status_code=201, dependencies=[Depends(require_owner), Depends(needs("lender_access"))])
 def grant_lender_access(body: LenderAccessIn, business: Business = Depends(get_business),
                         db: Session = Depends(get_db)):
     """The owner grants a lender scoped, expiring, read-only access. The token is shown only once."""
@@ -61,7 +61,7 @@ def grant_lender_access(body: LenderAccessIn, business: Business = Depends(get_b
             "note": "Share this token with the lender. It will not be shown again."}
 
 
-@router.delete("/lender-access/{access_id}", status_code=204)
+@router.delete("/lender-access/{access_id}", status_code=204, dependencies=[Depends(require_owner)])
 def revoke_lender_access(access_id: int, business: Business = Depends(get_business), db: Session = Depends(get_db)):
     row = owned(db, LenderAccess, access_id, business)
     row.revoked_at = utcnow()
@@ -92,7 +92,7 @@ def lender_view(x_lender_token: str = Header(..., max_length=128), db: Session =
     return out
 
 
-@router.get("/settings/export")
+@router.get("/settings/export", dependencies=[Depends(require_owner)])
 def export_data(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     """Everything stored for this business, as JSON (the user's right to their data)."""
     def rows(model, *fields):
@@ -112,14 +112,17 @@ def export_data(business: Business = Depends(get_business), db: Session = Depend
     }
 
 
-@router.delete("/settings/account", status_code=204)
+@router.delete("/settings/account", status_code=204, dependencies=[Depends(require_owner)])
 def delete_account(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Deletes the user, their business and all its records."""
-    scoped = (Reminder, Repayment, CreditScore, Notification, ChatMessage, LenderAccess, Goal,
-              Invoice, Bill, Transaction, Loan, Customer, Supplier)
+    """Deletes the owner, their staff, their business and every record that belongs to it."""
     for b in db.scalars(select(Business).where(Business.user_id == user.id)).all():
-        for model in scoped:
-            db.execute(delete(model).where(model.business_id == b.id))
+        # Children before parents, for every table that carries a business_id.
+        for table in reversed(Base.metadata.sorted_tables):
+            if "business_id" in table.c and table.name != "businesses":
+                db.execute(table.delete().where(table.c.business_id == b.id))
+        for staff in db.scalars(select(User).where(User.employer_business_id == b.id)).all():
+            db.execute(delete(RefreshToken).where(RefreshToken.user_id == staff.id))
+            db.delete(staff)
         db.delete(b)
     db.execute(delete(RefreshToken).where(RefreshToken.user_id == user.id))
     audit(db, "account_deleted", user.email, user_id=user.id)

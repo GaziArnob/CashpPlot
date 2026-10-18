@@ -1,31 +1,21 @@
-# Project need chart: data sources
+# Project-need chart: sources
 
-Chart: `project-need-chart.png`. Every figure below comes from a page that was opened and read.
+Chart: `project-need-chart.png`. Every figure below comes from IFC / World Bank material.
 
-| Figure on the chart | Value | Source |
-| --- | --- | --- |
-| Share of all economic units that are SMEs | 99.92% | [The Business Standard (TBS News)](https://www.tbsnews.net/node/1473921), citing SME Foundation data |
-| Share of total employment | almost 78% (about 23.6 million people) | same article, citing SME Foundation data |
-| Share of GDP | more than 31% | same article, citing SME Foundation data |
-| MSME financing gap | $2.8 billion | [TBS News, 28 Nov 2023](https://www.tbsnews.net/node/747726), estimate by IFC (World Bank Group) |
-| Cash-flow decline | 91% (worst of the countries compared) | [IFC press release, Oct 2020](https://www.ifc.org/en/pressroom/2020/new-ifc-survey-reveals-a-third-of-workers-in-bangladeshs-micro-s) |
-| Businesses reporting losses | more than 80% (month before the survey) | same IFC press release |
-| Workers who lost jobs, temporarily or permanently | 37% | same IFC press release |
-| Average cash cover | a little over 100 days | same IFC press release |
-
-The IFC / World Bank survey ran from June to August 2020 with more than 500 MSMEs.
+| Figure on the chart | Source |
+|---|---|
+| MSMEs are over 90% of firms, about 70% of employment and 50% of GDP worldwide | IFC, MSME finance pages: https://ifc.org/smefinance and https://www.worldbank.org/en/topic/smefinance |
+| MSME finance gap of about $5.7 trillion, 19% of GDP and 20% of private-sector credit, across 119 emerging and developing economies | IFC / World Bank, MSME Finance Gap report, March 2025 (summary: https://www.smefinanceforum.org/news/11526737) |
+| 40% of formal MSMEs are credit-constrained (19% fully, 21% partly) | Same report |
 
 ## Read this before presenting
 
-- **The survey figures are from the COVID period (2020).** They show how fragile small businesses' cash was then. They are
-  not today's rates. The chart says so in its footer; say it out loud too.
-- **The 91% figure:** IFC writes that Bangladesh's businesses suffered the "worst decline in cashflow" at 91 percent,
-  compared with Vietnam (66%) and Indonesia (69%). The press release does not spell out exactly what the percentage
-  measures, so quote it the way IFC does and don't explain it further.
-- **GDP share varies by source and year.** The 2023 TBS article says about 25% of GDP with nearly 10 million SMEs. The
-  more recent SME Foundation figure used on the chart is more than 31%. If someone asks, say the estimate depends on the
-  year and on how "SME" is defined.
-- **A $39 billion financing-gap figure also appears in one Daily Star article, but its origin isn't stated,
-  so it is not used here.** The $2.8 billion figure is attributed to IFC.
-- **This proves the need for the problem, not the product.** Nothing here measures how many businesses would use this
-  app. For that, run a short survey with real shopkeepers (even 10 to 20 people helps).
+- **The finance-gap and credit-constraint figures cover formal MSMEs in 119 emerging and developing economies**, not every
+  country. Say so out loud; the chart footer does.
+- **IFC's own pages quote the gap in more than one split** (for example $5.2 trillion formal and $2.9 trillion informal on the
+  homepage, against $5.7 trillion formal and about $2.1 trillion informal in the report). Only the $5.7 trillion formal
+  figure from the March 2025 report is used. Check the report itself before quoting anything else.
+- **The employment share is an average** (some secondary coverage gives 60-70%).
+- **Not used:** the widely repeated "82% of small businesses fail because of cash flow" claim. It is not traceable to a
+  primary source, and different websites word it differently.
+- **This proves the need for the problem, not the product.** Nothing here measures how many businesses would use CashPilot.

@@ -19,7 +19,7 @@ request (English or Bangla), compares financing costs, and recommends the cheape
 | --- | --- |
 | Dated cash flow, conflicts, bill options, financing costs | `app/engines/payables.py` |
 | Recommendation (simulates each step) | `app/engines/payables_recommend.py` |
-| Supplier messages (en/bn, template + guarded AI rewrite) | `app/ai/negotiation.py` |
+| Supplier messages (English, template + guarded AI rewrite) | `app/ai/negotiation.py` |
 | API | `app/api/payables.py` |
 | Service glue | `app/services.py` (`payables_analysis`, `supplier_profiles`, `financing_offers`) |
 | Tables | `app/models.py`, migration `migrations/versions/0003_supplier_negotiation_assistant.py` |
@@ -36,7 +36,7 @@ New tables: `payment_plans`, `payment_plan_installments`, `negotiation_drafts`, 
 | --- | --- |
 | `payment_plans` | One proposed schedule for one bill. `status`: draft, approved, accepted, rejected, cancelled, completed. Keeps who approved and when. |
 | `payment_plan_installments` | The dated parts of a plan: `due_date`, `amount`, `status` (scheduled/paid). |
-| `negotiation_drafts` | Editable message per bill/plan, with `lang` (en/bn), `generated_by`, `status` (draft/marked_sent). |
+| `negotiation_drafts` | Editable message per bill/plan, with `lang` (always `en`), `generated_by`, `status` (draft/marked_sent). |
 | `financing_offers` | Catalogue used for comparisons. Seeded rows have `is_demo = true`. |
 | `payables_recommendations` | History: one row per saved recommendation, with the full payload for later review. |
 
@@ -92,7 +92,7 @@ All endpoints need `Authorization: Bearer <token>`.
 | `POST /payment-plans/{id}/supplier-response` | Body `{"accepted": bool, "note": str?, "confirm": true}`. Needs approved. One accepted plan per bill |
 | `POST /payment-plans/{id}/cancel` | Cancel a plan |
 | `POST /payment-plans/installments/{id}/paid` | Body `{"confirm": true, "paid_date"?}`. Records a payment the owner made; updates the bill |
-| `POST /negotiation-drafts` | `{"bill_id", "plan_id"?, "lang": "en"|"bn", "polish": true}` creates an editable draft |
+| `POST /negotiation-drafts` | `{"bill_id", "plan_id"?, "polish": true}` creates an editable draft |
 | `GET/PUT/DELETE /negotiation-drafts[/{id}]` | List, edit, delete |
 | `POST /negotiation-drafts/{id}/mark-sent` | Body `{"confirm": true}`. Records that the owner sent it |
 | `GET /suppliers/{id}/terms` | Terms and the owner's payment record with that supplier |
@@ -118,7 +118,7 @@ Demo login: `demo@example.com` / `Demo@12345`. Free AI keys (Groq, Gemini) are o
 
 ## Sample data (from `seed/seed.py`)
 
-Four suppliers with terms (for example Meghna Distributors: 30 days, 2% discount if paid within 10 days, 1.5% a month
+Four suppliers with terms (for example Northwind Distributors: 30 days, 2% discount if paid within 10 days, 1.5% a month
 late fee), unpaid bills with dates close to today, overdue and partly paid customer invoices, a new customer with no
 record, and four **demo** financing offers (invoice advance, short-term loan, overdraft, quick trade loan).
 The demo shows a predicted clash of about 73,000 around Nov 5.
@@ -132,13 +132,13 @@ The demo shows a predicted clash of about 73,000 around Nov 5.
 `tests/test_payables.py` covers: balance reconciliation, confirmed versus estimated, no double counting (receivables,
 accepted plans, partly paid bills), late and at-risk receipts, new customers, overdue bills, conflicts, plan scheduling
 (totals, order, rounding, late fees), financing costs by hand-worked examples, the "repaid before the dip" rule,
-loan sizing, honest reporting of an unfixable gap, message figures (en/bn) and the AI-rewrite guard, and the API's
+loan sizing, honest reporting of an unfixable gap, message figures and the AI-rewrite guard, and the API's
 approval flow, validation, isolation and "nothing is sent" behaviour.
 
 ## Not built, and needed for real use
 
 - Real **financing partners**: licensed lenders or invoice-finance providers and their APIs. The offers here are demo data.
 - Real **delivery** of messages (WhatsApp Business API, SMS or email). Today the owner copies a draft and sends it.
-- **Payment execution** (bank, bKash or Nagad APIs). The app only records payments the owner made.
+- **Payment execution** (bank or payment-provider APIs). The app only records payments the owner made.
 - A way to import **supplier terms** automatically; they are entered by hand or seeded.
 - Row-Level Security in PostgreSQL and a multi-worker rate limiter (the app enforces isolation in code).

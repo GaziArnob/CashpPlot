@@ -83,7 +83,7 @@ export type ActionPlan = {
 
 export type AdvisorSummary = {
   as_of: string; currency: string;
-  advice: { text: string; generated_by: string; lang: "en" | "bn"; llm_rejected: boolean };
+  advice: { text: string; generated_by: string; llm_rejected: boolean };
   gap_card: {
     balance: number; threshold: number; first_shortage: Shortage | null; largest_gap: number; shortage_days: number;
     min_balance: { date: string; balance: number }; plan_expected: number; gap_covered: boolean; remaining_gap: number;
@@ -165,7 +165,7 @@ export type PaymentPlan = {
 };
 
 export type NegotiationDraft = {
-  id: number; bill_id: number; plan_id: number | null; lang: "en" | "bn"; message: string; generated_by: string;
+  id: number; bill_id: number; plan_id: number | null; lang: string; message: string; generated_by: string;
   status: "draft" | "marked_sent"; note: string;
 };
 

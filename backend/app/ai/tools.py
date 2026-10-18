@@ -79,17 +79,11 @@ class Aliaser:
         return alias
 
     def restore(self, text: str) -> str:
-        """Swap aliases back to real names. Models sometimes add a no-break space or bold, and
-        Bangla answers may translate the word Customer/Supplier but keep the code (C12, S1)."""
-        words = {"Customer": "Customer", "Supplier": "Supplier",
-                 "কাস্টমার": "Customer",          # kastomar
-                 "গ্রাহক": "Customer",                          # grahok
-                 "সাপ্লায়ার": "Supplier",  # saplayar
-                 "সরবরাহকারী": "Supplier"}  # sorborahkari
-        pattern = "(" + "|".join(words) + r")[\s   ]+([CS]\d+)(?!\d)"
+        """Swap aliases back to real names. Models sometimes add a no-break space or bold."""
+        pattern = r"(Customer|Supplier)[\s   ]+([CS]\d+)(?!\d)"
 
         def swap(m: re.Match) -> str:
-            return self.real.get(f"{words[m.group(1)]} {m.group(2)}", m.group(0))
+            return self.real.get(f"{m.group(1)} {m.group(2)}", m.group(0))
 
         return re.sub(pattern, swap, text)
 

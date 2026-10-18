@@ -1,6 +1,5 @@
 """Collection scoring: buckets, history without look-ahead, probability model, actions, credit limits."""
 
-import re
 from datetime import date, timedelta
 
 import pytest
@@ -142,14 +141,15 @@ def test_partially_paid_invoice_scores_on_the_remainder():
     assert row["outstanding"] == 4_000 and row["invoices"][0]["original_amount"] == 10_000
 
 
-def test_bangla_reminder_formatting():
-    text = reminder("discount", customer="Rahim Store", business="Karim Traders", amount=15_000, currency="BDT",
-                    due_date="2026-10-07", days=10, lang="bn", discount_deadline="2026-10-20")
-    assert "১৫,০০০ টাকা" in text and "১৪,৭০০ টাকা" in text and "অক্টোবর" in text and "২%" in text
-    assert not re.search(r"[0-9]", text)  # every figure in Bangla digits
-    en = reminder("final", customer="Rahim Store", business="Karim Traders", amount=15_000, currency="BDT",
-                  due_date="2026-10-07", days=10, lang="en")
-    assert "BDT 15,000" in en and "10 days overdue" in en
+def test_reminder_formatting():
+    text = reminder("discount", customer="Harbor Market", business="Evergreen Traders", amount=15_000, currency="USD",
+                    due_date="2026-10-07", days=10, discount_deadline="2026-10-20")
+    assert "$15,000" in text and "$14,700" in text and "Oct 20, 2026" in text and "2%" in text
+    final = reminder("final", customer="Harbor Market", business="Evergreen Traders", amount=15_000, currency="USD",
+                     due_date="2026-10-07", days=10)
+    assert "$15,000" in final and "10 days overdue" in final and "Oct 7, 2026" in final
+    assert reminder("friendly", customer="A", business="B", amount=1_500, currency="CHF", due_date="2026-10-07",
+                    days=0).count("CHF 1,500") == 1
 
 
 def test_collections_api(client, demo_headers):
@@ -168,13 +168,10 @@ def test_collections_api(client, demo_headers):
     finally:
         db.close()
 
-    rahim = next(c for c in r["customers"] if c["customer_name"] == "Rahim Store")
-    bn = client.post(f"/collections/{rahim['customer_id']}/reminder?lang=bn", headers=demo_headers).json()
-    assert "Rahim Store" in bn["message"] and "টাকা" in bn["message"] and bn["status"] == "draft"
-    assert bn["generated_by"] == "template:bn"
-    en = client.post(f"/collections/{rahim['customer_id']}/reminder?lang=en&polish=false",
+    rahim = next(c for c in r["customers"] if c["customer_name"] == "Harbor Market")
+    en = client.post(f"/collections/{rahim['customer_id']}/reminder?polish=false",
                      headers=demo_headers).json()
-    assert f"BDT {rahim['outstanding']:,}" in en["message"]
+    assert f"${rahim['outstanding']:,}" in en["message"]
 
     applied = client.post(f"/customers/{rahim['customer_id']}/credit-limit", headers=demo_headers, json={}).json()
     assert applied["credit_limit"] == rahim["credit_limit"]

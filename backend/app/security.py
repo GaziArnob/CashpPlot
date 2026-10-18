@@ -2,6 +2,10 @@
 
 import base64
 import hashlib
+import hmac
+import os
+import struct
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -85,3 +89,40 @@ class EncryptedString(TypeDecorator):
             return _fernet().decrypt(value.encode()).decode()
         except InvalidToken:
             return None
+
+
+# Two-factor authentication: time-based one-time codes (RFC 6238), compatible with Google Authenticator,
+# Authy, 1Password and similar apps.
+
+TOTP_STEP = 30
+TOTP_DIGITS = 6
+
+
+def new_totp_secret() -> str:
+    return base64.b32encode(os.urandom(20)).decode().rstrip("=")
+
+
+def _hotp(secret: str, counter: int) -> str:
+    key = base64.b32decode(secret + "=" * (-len(secret) % 8), casefold=True)
+    digest = hmac.new(key, struct.pack(">Q", counter), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    code = (struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 10 ** TOTP_DIGITS
+    return f"{code:0{TOTP_DIGITS}d}"
+
+
+def totp_code(secret: str, at: float | None = None) -> str:
+    return _hotp(secret, int((time.time() if at is None else at) // TOTP_STEP))
+
+
+def verify_totp(secret: str, code: str, at: float | None = None, window: int = 1) -> bool:
+    """Accepts the current code and one step either side (clock drift)."""
+    code = (code or "").strip().replace(" ", "")
+    if len(code) != TOTP_DIGITS or not code.isdigit():
+        return False
+    counter = int((time.time() if at is None else at) // TOTP_STEP)
+    return any(hmac.compare_digest(_hotp(secret, counter + d), code) for d in range(-window, window + 1))
+
+
+def totp_uri(secret: str, email: str, issuer: str = "CashPilot") -> str:
+    from urllib.parse import quote
+    return f"otpauth://totp/{quote(issuer)}:{quote(email)}?secret={secret}&issuer={quote(issuer)}"

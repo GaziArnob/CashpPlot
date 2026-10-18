@@ -136,8 +136,8 @@ def action_plan(db: Session, business: Business) -> dict:
     return {**summary, "actions": actions}
 
 
-def advisor_summary(db: Session, business: Business, lang: str = "en") -> dict:
-    """Everything the Cash Advisor screen needs, plus the bn/en advice written from those numbers."""
+def advisor_summary(db: Session, business: Business) -> dict:
+    """Everything the Cash Advisor screen needs, plus the advice written from those numbers."""
     from app.ai import explainer
     from app.ai.tools import Aliaser
 
@@ -148,7 +148,7 @@ def advisor_summary(db: Session, business: Business, lang: str = "en") -> dict:
     prods = products.score_products(d, today(), cash_budget(fc))
     alias = Aliaser()
     facts = explainer.build_facts(fc, plan, collections["customers"], prods, business.currency, alias)
-    advice = explainer.explain(facts, lang, alias, cache_key=f"{business.id}:{today().isoformat()}")
+    advice = explainer.explain(facts, alias, cache_key=f"{business.id}:{today().isoformat()}", mode=business.ai_mode)
     return {
         "as_of": today().isoformat(),
         "currency": business.currency,

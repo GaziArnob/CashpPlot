@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, AlertTriangle } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -86,7 +87,12 @@ export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () =
   return (
     <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-      <div className="flex-1">{message}</div>
+      <div className="flex-1">
+        {message}
+        {message.startsWith("Upgrade to Pro") && (
+          <> <Link href="/settings#plan" className="font-medium underline">See plans</Link></>
+        )}
+      </div>
       {onRetry && <button className="font-medium underline" onClick={onRetry}>Retry</button>}
     </div>
   );

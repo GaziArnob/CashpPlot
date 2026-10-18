@@ -1,7 +1,6 @@
 """Receivable prioritization: ranked collections, bilingual reminders, credit limits."""
 
 from datetime import timedelta
-from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -12,11 +11,11 @@ from app import services
 from app.ai import templates
 from app.ai.text import polish_reminder
 from app.db import get_db
-from app.deps import ai_limiter, audit, get_business, owned
+from app.deps import ai_limiter, audit, get_business, needs, owned, require_owner
 from app.models import Business, CollectionScore, Customer, Invoice, Reminder
 from app.schemas import ReminderOut
 
-router = APIRouter(tags=["collections"])
+router = APIRouter(tags=["collections"], dependencies=[Depends(require_owner), Depends(needs("collections"))])
 
 # Which message style fits each recommended action.
 ACTION_TO_TEMPLATE = {"stop_credit": "final", "visit": "firm", "call": "firm", "discount": "discount",
@@ -51,7 +50,7 @@ def score_history(customer_id: int, business: Business = Depends(get_business), 
 
 @router.post("/collections/{customer_id}/reminder", response_model=ReminderOut, status_code=201,
              dependencies=[Depends(ai_limiter)])
-def collection_reminder(customer_id: int, lang: Literal["en", "bn"] = "en", polish: bool = True,
+def collection_reminder(customer_id: int, polish: bool = True,
                         business: Business = Depends(get_business), db: Session = Depends(get_db)):
     """Draft (never send) a reminder for everything this customer owes, in the style its action calls for."""
     customer = owned(db, Customer, customer_id, business)
@@ -63,13 +62,13 @@ def collection_reminder(customer_id: int, lang: Literal["en", "bn"] = "en", poli
     style = ACTION_TO_TEMPLATE.get(c["action"]) or c["tone"]
     text = templates.reminder(
         style, customer=customer.name, business=business.name, amount=c["outstanding"],
-        currency=business.currency, due_date=oldest["due_date"], days=c["max_days_overdue"], lang=lang,
+        currency=business.currency, due_date=oldest["due_date"], days=c["max_days_overdue"],
         discount_deadline=(services.today() + timedelta(days=3)).isoformat())
     generated_by = "template"
-    if polish and lang == "en":  # Bangla stays on the reviewed template so figures can't drift
-        text, generated_by = polish_reminder(text, style, customer.name, business.name)
+    if polish:
+        text, generated_by = polish_reminder(text, style, customer.name, business.name, business.ai_mode)
     r = Reminder(business_id=business.id, invoice_id=oldest["invoice_id"], message=text, tone=style,
-                 generated_by=f"{generated_by}:{lang}")
+                 generated_by=generated_by)
     db.add(r)
     db.commit()
     return r
