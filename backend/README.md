@@ -22,6 +22,20 @@ The seed builds one year of data for "Evergreen Traders" relative to today, with
 little over a week ahead (a large supplier bill), one customer ten days overdue and another more than
 30 days overdue. The demo business is on the Pro plan.
 
+## PostgreSQL and row-level security
+
+SQLite is the default. To run on PostgreSQL, create a role that is **not** a superuser (superusers skip row-level
+security) and a database it owns, then set `DATABASE_URL=postgresql+psycopg://user:password@host:5432/dbname`.
+Migration `0005` turns on row-level security for every table with a `business_id`: a request only sees its own
+business's rows even if a query forgets the filter. Seed, background jobs and the lender view run with the bypass
+flag (see `app/db.py`). `audit_log` is excluded because login events have no business.
+
+Check it on your database: `RLS_TEST_URL=<empty test database url> pytest tests/test_rls_postgres.py` (this wipes
+that database's `public` schema, so use a scratch one).
+
+`docker compose --env-file deploy/.env up --build` (repository root) starts PostgreSQL, the backend and the frontend.
+Copy `deploy/.env.example` to `deploy/.env` first.
+
 ## Layout
 
 ```
@@ -46,8 +60,8 @@ tests/             engine and API tests
 templates, so a demo never breaks. Customer and supplier names are replaced with aliases
 ("Customer C12") before any data reaches a provider, and restored in the answer.
 
-Receipt scanning uses Tesseract when `pytesseract` and `Pillow` are installed, otherwise Gemini's
-free vision; the result is a suggestion the owner confirms.
+Receipt scanning uses Tesseract when it is installed (set `TESSERACT_CMD` and `TESSDATA_PREFIX` if it is not on PATH),
+otherwise Gemini's free vision; the result is a suggestion the owner confirms.
 
 ## Main endpoints
 
@@ -75,4 +89,4 @@ free vision; the result is a suggestion the owner confirms.
 
 - Owner drawings reduce cash in the forecast, but credit and loan capacity use business cash flow before drawings.
 - Overdue invoices are not counted as future inflow (conservative); they show up as recovery opportunities.
-- Rate limits are in memory; use Redis if you run several workers. PostgreSQL Row-Level Security is not set up yet; isolation is enforced in the app on every query.
+- Rate limits are in memory; use Redis if you run several workers. On SQLite isolation is enforced in the app on every query; on PostgreSQL row-level security adds a second layer.
