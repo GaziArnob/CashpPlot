@@ -90,8 +90,24 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+        <h2 className="text-center text-2xl font-semibold tracking-tight">Start free, upgrade when you need more</h2>
+        <div className="mt-8 grid gap-5 sm:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 p-6">
+            <h3 className="font-semibold">Free</h3>
+            <p className="mt-1.5 text-sm text-slate-600">Transactions, customers, invoices, the dashboard and a 7-day cash forecast.</p>
+          </div>
+          <div className="rounded-xl border-2 border-emerald-600 p-6">
+            <h3 className="font-semibold">Pro <span className="text-xs font-normal text-emerald-700">14-day free trial</span></h3>
+            <p className="mt-1.5 text-sm text-slate-600">The 30-day forecast, Cash Advisor, collections, supplier plans, credit score, loans, reports and the AI assistant.</p>
+          </div>
+        </div>
+        <p className="mt-4 text-center text-xs text-slate-500">Billing is in demo mode: switching plans takes no payment.</p>
+      </section>
+
       <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-        CashPilot gives estimates from your own data. It is not financial advice, and loan figures are not an approval.
+        <p>CashPilot gives estimates from your own data. It is not financial advice, and loan figures are not an approval.</p>
+        <p className="mt-2">Are you a lender? <Link href="/lender" className="font-medium text-emerald-700 hover:underline">Open a shared business view</Link></p>
       </footer>
     </div>
   );
