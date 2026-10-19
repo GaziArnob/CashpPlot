@@ -9,10 +9,10 @@ import { useApi } from "@/lib/hooks";
 import type { Credit } from "@/lib/types";
 
 const BANDS = [
-  { from: 300, to: 550, color: "#f43f5e", label: "Needs improvement" },
+  { from: 300, to: 550, color: "#f2817f", label: "Needs improvement" },
   { from: 550, to: 650, color: "#f59e0b", label: "Fair" },
-  { from: 650, to: 750, color: "#10b981", label: "Good" },
-  { from: 750, to: 900, color: "#059669", label: "Excellent" },
+  { from: 650, to: 750, color: "#4cc38a", label: "Good" },
+  { from: 750, to: 900, color: "#8b72e0", label: "Excellent" },
 ];
 
 function polar(score: number, r: number) {
@@ -30,10 +30,10 @@ function Gauge({ score, band }: { score: number; band: string }) {
   return (
     <svg viewBox="0 0 240 140" className="mx-auto w-full max-w-xs" role="img" aria-label={`Credit score ${score}, ${band}`}>
       {BANDS.map((b) => <path key={b.label} d={arc(b.from, b.to)} stroke={b.color} strokeWidth={16} fill="none" />)}
-      <line x1={120} y1={120} x2={nx} y2={ny} stroke="#0f172a" strokeWidth={3} strokeLinecap="round" />
-      <circle cx={120} cy={120} r={6} fill="#0f172a" />
-      <text x={24} y={136} fontSize={10} fill="#64748b">300</text>
-      <text x={200} y={136} fontSize={10} fill="#64748b">900</text>
+      <line x1={120} y1={120} x2={nx} y2={ny} stroke="#ecebef" strokeWidth={3} strokeLinecap="round" />
+      <circle cx={120} cy={120} r={6} fill="#ecebef" />
+      <text x={24} y={136} fontSize={10} fill="#908d98">300</text>
+      <text x={200} y={136} fontSize={10} fill="#908d98">900</text>
     </svg>
   );
 }
@@ -197,11 +197,11 @@ export default function CreditScorePage() {
           {history.data && history.data.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={history.data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} />
-                <YAxis domain={[300, 900]} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} width={36} />
+                <CartesianGrid stroke="#312e35" vertical={false} />
+                <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fontSize: 11, fill: "#908d98" }} tickLine={false} />
+                <YAxis domain={[300, 900]} tick={{ fontSize: 11, fill: "#908d98" }} tickLine={false} axisLine={false} width={36} />
                 <Tooltip labelFormatter={(l) => shortDate(String(l))} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                <Line dataKey="score" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
+                <Line dataKey="score" stroke="#8b72e0" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           ) : history.data ? (

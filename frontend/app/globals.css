@@ -1,13 +1,115 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ForgeFlow-style theme: dark violet/indigo canvas, Inter + JetBrains Mono.
+   Components keep their slate/emerald/rose/amber/sky utility classes; the palette below is
+   re-pointed so the whole app re-themes without touching any component logic. */
+
+:root {
+  --ff-canvas: 17 17 19;
+  --ff-surface: 24 23 27;
+  --ff-raised: 33 31 36;
+  --ff-overlay: 29 28 32;
+  --ff-sunken: 12 11 13;
+  --ff-fg: 236 235 239;
+  --ff-fg-muted: 180 177 187;
+  --ff-fg-subtle: 144 141 152;
+  --ff-fg-faint: 110 107 118;
+  --ff-edge: 49 46 53;
+  --ff-edge-strong: 62 59 68;
+  --ff-brand: 91 91 214;
+  --ff-brand-hover: 105 102 224;
+  --ff-brand-text: 177 169 255;
+  --ff-success: 76 195 138;
+  --ff-warning: 229 180 80;
+  --ff-danger: 242 129 127;
+  --ff-info: 108 178 242;
+  color-scheme: dark;
 }
 
-body {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+@theme inline {
+  --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+
+  /* neutrals, inverted for a dark canvas */
+  --color-slate-50: rgb(var(--ff-canvas));
+  --color-slate-100: rgb(var(--ff-raised));
+  --color-slate-200: rgb(var(--ff-edge));
+  --color-slate-300: rgb(var(--ff-edge-strong));
+  --color-slate-400: rgb(var(--ff-fg-faint));
+  --color-slate-500: rgb(var(--ff-fg-subtle));
+  --color-slate-600: rgb(var(--ff-fg-muted));
+  --color-slate-700: rgb(214 212 220);
+  --color-slate-800: rgb(226 224 231);
+  --color-slate-900: rgb(var(--ff-fg));
+
+  /* primary (was emerald) -> ForgeFlow indigo */
+  --color-emerald-50: rgb(var(--ff-brand) / 0.14);
+  --color-emerald-100: rgb(var(--ff-brand) / 0.22);
+  --color-emerald-200: rgb(var(--ff-brand) / 0.4);
+  --color-emerald-300: rgb(139 114 224);
+  --color-emerald-500: rgb(var(--ff-brand));
+  --color-emerald-600: rgb(var(--ff-brand));
+  --color-emerald-700: rgb(var(--ff-brand-hover));
+  --color-emerald-800: rgb(var(--ff-brand-text));
+  --color-emerald-900: rgb(var(--ff-brand-text));
+
+  /* status colours: dark tinted backgrounds, light text */
+  --color-rose-50: rgb(var(--ff-danger) / 0.12);
+  --color-rose-200: rgb(var(--ff-danger) / 0.35);
+  --color-rose-500: rgb(198 70 74);
+  --color-rose-600: rgb(var(--ff-danger));
+  --color-rose-700: rgb(var(--ff-danger));
+  --color-rose-800: rgb(250 170 168);
+  --color-rose-900: rgb(252 190 188);
+
+  --color-amber-50: rgb(var(--ff-warning) / 0.12);
+  --color-amber-200: rgb(var(--ff-warning) / 0.35);
+  --color-amber-500: rgb(var(--ff-warning));
+  --color-amber-600: rgb(var(--ff-warning));
+  --color-amber-700: rgb(var(--ff-warning));
+  --color-amber-800: rgb(240 205 130);
+  --color-amber-900: rgb(244 218 160);
+
+  --color-sky-50: rgb(var(--ff-info) / 0.12);
+  --color-sky-200: rgb(var(--ff-info) / 0.35);
+  --color-sky-500: rgb(var(--ff-info));
+  --color-sky-700: rgb(var(--ff-info));
+  --color-sky-900: rgb(170 211 248);
 }
+
+/* surfaces that were plain white become the dark surface; white text stays white */
+.bg-white { background-color: rgb(var(--ff-surface)); }
+.to-white { --tw-gradient-to: rgb(var(--ff-surface)); }
+.bg-slate-900 { background-color: rgb(var(--ff-raised)); color: rgb(var(--ff-fg)); }
+.bg-rose-600 { background-color: rgb(198 70 74); }
+
+html { background-color: rgb(var(--ff-canvas)); }
+
+body {
+  font-family: var(--font-inter), "Inter", system-ui, sans-serif;
+  background-color: rgb(var(--ff-canvas));
+  color: rgb(var(--ff-fg));
+}
+
+/* ForgeFlow-style raised card edge and soft glow on focus */
+.bg-white.rounded-2xl,
+.bg-white.rounded-xl {
+  box-shadow: 0 0 0 1px rgb(var(--ff-edge-strong) / 0.6), 0 12px 28px -10px rgb(0 0 0 / 0.55);
+}
+
+input, select, textarea {
+  background-color: rgb(var(--ff-sunken));
+  color: rgb(var(--ff-fg));
+  color-scheme: dark;
+}
+input::placeholder, textarea::placeholder { color: rgb(var(--ff-fg-faint)); }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: rgb(var(--ff-brand));
+  box-shadow: 0 0 0 3px rgb(var(--ff-brand) / 0.18);
+}
+
+::selection { background: rgb(var(--ff-brand) / 0.45); }
 
 .tabular {
   font-variant-numeric: tabular-nums;

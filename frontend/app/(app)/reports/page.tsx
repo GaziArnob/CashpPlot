@@ -109,8 +109,8 @@ export default function ReportsPage() {
           <Card className="mb-6">
             <CardTitle>Profit and loss, {p.month}</CardTitle>
             <div className="grid gap-8 md:grid-cols-2">
-              <Breakdown title="Money in" rows={p.income} total={p.total_income} color="#059669" cur={cur} />
-              <Breakdown title="Money out" rows={p.expense} total={p.total_expense} color="#e11d48" cur={cur} />
+              <Breakdown title="Money in" rows={p.income} total={p.total_income} color="#8b72e0" cur={cur} />
+              <Breakdown title="Money out" rows={p.expense} total={p.total_expense} color="#f2817f" cur={cur} />
             </div>
           </Card>
         </>
