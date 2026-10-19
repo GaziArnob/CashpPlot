@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -71,6 +72,19 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = True  # run the daily job inside the app
     daily_job_hour: int = 7
     alerts_log_path: str = "alerts.log"
+
+    @field_validator("whatsapp_token", "whatsapp_phone_number_id", "twilio_account_sid", "twilio_auth_token",
+                     "brevo_api_key", "mailjet_api_key", "mailjet_secret_key", "smtp_password", "stripe_secret_key",
+                     "plaid_secret", mode="before")
+    @classmethod
+    def _clean_secret(cls, v):
+        """A secret pasted into a dashboard often carries a space, a line break, quotes or a 'Bearer ' prefix."""
+        if not isinstance(v, str):
+            return v
+        v = v.strip().strip("\"'").strip()
+        if v.lower().startswith("bearer "):
+            v = v[7:].strip()
+        return v
 
     @property
     def cors_origin_list(self) -> list[str]:
