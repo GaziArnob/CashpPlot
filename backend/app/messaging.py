@@ -62,9 +62,23 @@ def normalize_phone(raw: str | None) -> str | None:
     return cleaned if PHONE.match(cleaned) else None
 
 
+def _reason(resp: httpx.Response) -> str:
+    """What the provider said went wrong, if it says (Twilio: message, Meta: error.message, Brevo/Mailjet: message)."""
+    try:
+        body = resp.json()
+    except (ValueError, AttributeError):
+        return ""
+    if not isinstance(body, dict):
+        return ""
+    err = body.get("error")
+    msg = body.get("message") or (err.get("message") if isinstance(err, dict) else err) or body.get("ErrorMessage")
+    return " ".join(str(msg).split())[:200] if msg else ""
+
+
 def _check(resp: httpx.Response, provider: str) -> None:
     if resp.status_code >= 300:
-        raise DeliveryError(f"{provider} rejected the message ({resp.status_code})")
+        why = _reason(resp)
+        raise DeliveryError(f"{provider} rejected the message ({resp.status_code})" + (f": {why}" if why else ""))
 
 
 def _email(to: str, subject: str, text: str) -> Delivery:

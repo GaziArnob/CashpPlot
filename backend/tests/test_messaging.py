@@ -338,3 +338,21 @@ def test_mailjet_answering_200_with_an_error_status_is_not_reported_as_sent(clie
         assert ok["delivery"] == "delivered" and "123456789" in ok["delivery_note"]
     finally:
         FakeResp.body = None
+
+
+def test_the_providers_own_reason_is_shown_when_it_refuses(client, demo_headers, live):
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    live.code["code"] = 400
+    FakeResp.body = {"code": 21608, "message": "The number +14155550123 is unverified. Trial accounts cannot send messages to unverified numbers."}
+    try:
+        r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "sms"})
+        detail = r.json()["detail"]
+        assert r.status_code == 502 and "Twilio rejected the message (400)" in detail and "unverified" in detail
+        FakeResp.body = {"error": {"message": "Recipient phone number not in allowed list"}}      # Meta's shape
+        detail = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp"}).json()["detail"]
+        assert "WhatsApp rejected the message (400)" in detail and "not in allowed list" in detail
+        FakeResp.body = None                                                                        # no body: just the code
+        assert client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "sms"}).json()["detail"].startswith("Twilio rejected the message (400). Nothing")
+    finally:
+        FakeResp.body = None

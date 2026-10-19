@@ -49,6 +49,14 @@ Each one is off until its keys are set in Render, and none of them acts without 
 | Pro payments, https://stripe.com | `BILLING_MODE=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Settings → Upgrade to Pro opens Stripe Checkout |
 | Bank import, https://plaid.com | `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox` | Transactions → Connect a bank. Sandbox uses sample banks only |
 
+### Twilio SMS on a trial account
+
+- A trial account can message **only numbers you verified** (Console → Phone Numbers → Verified Caller IDs). Anything
+  else is refused, and the reminder dialog shows Twilio's own reason.
+- To text a country, enable it under Messaging → Settings → **Geo Permissions** (for example Bangladesh).
+- Trial messages start with "Sent from your Twilio trial account". Upgrading removes that and the verified-number limit.
+- Customer phone numbers must be in international format, e.g. `+8801XXXXXXXXX` or `+14155550123`.
+
 ### WhatsApp template
 
 To reach a customer who has not messaged you, WhatsApp requires an approved template. In Meta's WhatsApp Manager create
