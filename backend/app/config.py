@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     twilio_account_sid: str = ""  # SMS, https://www.twilio.com
     twilio_auth_token: str = ""
     twilio_from: str = ""
+    # WhatsApp through the same Twilio account: the sandbox number "whatsapp:+14155238886", or your approved sender.
+    twilio_whatsapp_from: str = ""
 
     # Stripe (use test keys until the business is verified). BILLING_MODE=stripe turns checkout on.
     stripe_secret_key: str = ""

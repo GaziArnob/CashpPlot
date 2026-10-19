@@ -45,11 +45,16 @@ def _smtp_ready() -> bool:
     return bool(s.smtp_host and s.smtp_user and s.smtp_password)
 
 
+def _twilio_ready() -> bool:
+    s = get_settings()
+    return bool(s.twilio_account_sid and s.twilio_auth_token)
+
+
 def configured_channels() -> dict[str, bool]:
     s = get_settings()
     return {
         "email": _brevo_ready() or _mailjet_ready() or _smtp_ready(),
-        "whatsapp": bool(s.whatsapp_token and s.whatsapp_phone_number_id),
+        "whatsapp": bool(s.whatsapp_token and s.whatsapp_phone_number_id) or (_twilio_ready() and bool(s.twilio_whatsapp_from)),
         "sms": bool(s.twilio_account_sid and s.twilio_auth_token and s.twilio_from),
     }
 
@@ -171,6 +176,21 @@ def _clean(value: str) -> str:
     return " ".join(str(value).split())[:200]
 
 
+def _twilio_whatsapp(to: str, text: str) -> Delivery:
+    """WhatsApp through Twilio. In the sandbox the person must first send Twilio's join phrase to the sandbox number;
+    after that, free text reaches them for 24 hours from their last message."""
+    s = get_settings()
+    sender = s.twilio_whatsapp_from if s.twilio_whatsapp_from.startswith("whatsapp:") else f"whatsapp:{s.twilio_whatsapp_from}"
+    try:
+        r = httpx.post(f"https://api.twilio.com/2010-04-01/Accounts/{s.twilio_account_sid}/Messages.json", timeout=TIMEOUT,
+                       auth=(s.twilio_account_sid, s.twilio_auth_token), data={"To": f"whatsapp:{to}", "From": sender, "Body": text})
+    except httpx.HTTPError:
+        raise DeliveryError("Could not reach Twilio")
+    _check(r, "Twilio")
+    return Delivery(True, "twilio-whatsapp", "In the Twilio sandbox, only people who joined it can receive this, and free text "
+                                              "works for 24 hours after their last message to the sandbox number.")
+
+
 def _sms(to: str, text: str) -> Delivery:
     s = get_settings()
     try:
@@ -199,4 +219,9 @@ def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: s
     phone = normalize_phone(to_phone)
     if phone is None:
         raise ValueError("This customer has no phone number on file in international format, e.g. +14155550123")
-    return _whatsapp(phone, text, template_params or []) if channel == "whatsapp" else _sms(phone, text)
+    if channel == "whatsapp":
+        s = get_settings()
+        if s.whatsapp_token and s.whatsapp_phone_number_id:
+            return _whatsapp(phone, text, template_params or [])
+        return _twilio_whatsapp(phone, text)
+    return _sms(phone, text)

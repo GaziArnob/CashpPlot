@@ -49,6 +49,14 @@ Each one is off until its keys are set in Render, and none of them acts without 
 | Pro payments, https://stripe.com | `BILLING_MODE=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Settings → Upgrade to Pro opens Stripe Checkout |
 | Bank import, https://plaid.com | `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox` | Transactions → Connect a bank. Sandbox uses sample banks only |
 
+### WhatsApp through the same Twilio account (no Meta setup)
+
+Set `TWILIO_WHATSAPP_FROM=whatsapp:+14155238886` (Twilio's sandbox number; see Console → Messaging → Try it out → Send a
+WhatsApp message, where the exact number and your join phrase are shown). With the same `TWILIO_ACCOUNT_SID` and
+`TWILIO_AUTH_TOKEN`, the WhatsApp channel then works alongside SMS. Each recipient must first send the join phrase
+(`join something-something`) from their WhatsApp to the sandbox number; after that, free text reaches them for 24 hours
+from their last message. If the Meta variables are also set, Meta's WhatsApp is used instead.
+
 ### Twilio SMS on a trial account
 
 - A trial account can message **only numbers you verified** (Console → Phone Numbers → Verified Caller IDs). Anything
