@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai import providers
 from app.api import (actions, advisor, agent, auth, bank, billing, collections, customers, finance, ledger, payables,
-                     products, referrals, reports, settings, stripe_webhook, team, transactions)
+                     notifications, products, referrals, reports, settings, stripe_webhook, team, transactions)
 from app.config import get_settings
 from app.db import init_db
 from app.jobs import scheduler
@@ -56,5 +56,5 @@ def health():
 
 
 for r in (auth, transactions, ledger, collections, customers, products, actions, advisor, payables, finance,
-          reports, agent, settings, team, billing, referrals, bank, stripe_webhook):
+          reports, agent, settings, team, billing, referrals, bank, stripe_webhook, notifications):
     app.include_router(r.router)

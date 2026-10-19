@@ -86,12 +86,14 @@ export default function DashboardPage() {
 
       {data.notifications.length > 0 && (
         <Card className="mt-6">
-          <CardTitle>Alerts</CardTitle>
+          <CardTitle right={<Link href="/notifications" className="text-xs font-medium text-emerald-700 hover:underline">See all</Link>}>Alerts</CardTitle>
           <ul className="space-y-2">
             {data.notifications.map((n) => (
               <li key={n.id} className="flex items-start gap-3 text-sm">
                 <Bell className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                <span className="flex-1 text-slate-700">{n.message}</span>
+                <span className="flex-1 text-slate-700">
+                  {n.link ? <Link href={n.link} className="hover:underline">{n.message}</Link> : n.message}
+                </span>
                 <Badge color={n.type === "cash_shortage" ? "red" : n.type === "overdue" ? "amber" : "slate"}>
                   {n.type.replace("_", " ")}
                 </Badge>

@@ -12,7 +12,7 @@ export type Dashboard = {
   credit_score: { score: number; band: string };
   top_collections: { customer_id: number; customer_name: string; overdue_amount: number; max_days_overdue: number }[];
   summary: string;
-  notifications: { id: number; type: string; message: string }[];
+  notifications: { id: number; type: string; message: string; severity?: string; link?: string | null }[];
 };
 
 export type ForecastRow = {

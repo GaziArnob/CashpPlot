@@ -331,6 +331,48 @@ function DataCard() {
   );
 }
 
+type Prefs = { types: { type: string; label: string; severity: string; muted: boolean }[]; email: boolean; email_available: boolean };
+
+function NotificationsCard() {
+  const prefs = useApi<Prefs>("/notifications/preferences");
+  const a = useAction();
+  const [muted, setMuted] = useState<string[] | null>(null);
+  const [email, setEmail] = useState<boolean | null>(null);
+  if (!prefs.data) return <Section id="notifications" title="Notifications">{prefs.error ? <ErrorBox message={prefs.error} onRetry={prefs.reload} /> : <Loading />}</Section>;
+  const p = prefs.data;
+  const mutedNow = muted ?? p.types.filter((t) => t.muted).map((t) => t.type);
+  const emailNow = email ?? p.email;
+  const toggle = (type: string, on: boolean) => setMuted(on ? mutedNow.filter((m) => m !== type) : [...mutedNow, type]);
+  return (
+    <Section id="notifications" title="Notifications">
+      <p className="mb-3 text-sm text-slate-500">Choose which alerts you get. Each one appears once, and again only if it is still unresolved days later.</p>
+      <ul className="space-y-2 text-sm">
+        {p.types.map((t) => (
+          <li key={t.type}>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={!mutedNow.includes(t.type)} onChange={(e) => toggle(t.type, e.target.checked)} />
+              {t.label} {t.severity === "critical" && <Badge color="red">urgent</Badge>}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <label className={`mt-4 flex items-start gap-2 text-sm ${p.email_available ? "" : "text-slate-400"}`}>
+        <input type="checkbox" className="mt-1" disabled={!p.email_available} checked={emailNow} onChange={(e) => setEmail(e.target.checked)} />
+        <span>Also email me urgent alerts{!p.email_available && " (email is not set up on this server yet)"}</span>
+      </label>
+      <div className="mt-4">
+        <Button onClick={() => a.run(async () => {
+          await api("/notifications/preferences", { method: "PUT", body: JSON.stringify({ muted: mutedNow, email: emailNow && p.email_available }) });
+          setMuted(null);
+          setEmail(null);
+          prefs.reload();
+        }, "Saved")}>Save</Button>
+      </div>
+      <Msg a={a} />
+    </Section>
+  );
+}
+
 export default function SettingsPage() {
   const me = useMe();
   const biz = useApi<Business>("/settings");
@@ -347,6 +389,7 @@ export default function SettingsPage() {
         {plan.data ? <PlanCard plan={plan.data} reload={plan.reload} /> : plan.error ? <ErrorBox message={plan.error} /> : <Loading />}
         <TeamCard />
         <LenderAccessCard key={plan.data?.effective_plan} />
+        <NotificationsCard />
         {me && <TwoFactorCard enabled={me.totp_enabled} reload={() => window.location.reload()} />}
         <DataCard />
       </div>

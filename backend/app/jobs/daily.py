@@ -10,10 +10,10 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import alerts, services
+from app import alerts, notify, services
 from app.ai.templates import day, money
 from app.db import SessionLocal
-from app.models import Business, Notification
+from app.models import AuditLog, Business
 
 log = logging.getLogger(__name__)
 
@@ -34,15 +34,19 @@ def run_for_business(db: Session, business: Business) -> dict:
                    f" (largest gap in 30 days: {money(fc['largest_gap'], cur)}).")
         if first_step:
             message += f" First step: {first_step}."
-        since = services.today_start_utc()
-        already = db.scalar(select(Notification).where(
-            Notification.business_id == business.id, Notification.type == "cash_crunch",
-            Notification.created_at >= since))
-        if already is None:
-            db.add(Notification(business_id=business.id, type="cash_crunch", message=message))
-            db.commit()
+        # The same key the dashboard rule uses, so the two never raise it twice for the same shortage day.
+        notify.create(db, business, "cash_shortage", message, key=f"shortage:{s['date']}", link="/cashflow",
+                      cooldown_days=3)
+        db.commit()
+        # The dashboard may already have raised the notification; the owner alert still goes out once a day.
+        if db.scalar(select(AuditLog.id).where(AuditLog.business_id == business.id, AuditLog.action == "alert_sent",
+                                               AuditLog.created_at >= services.today_start_utc()).limit(1)) is None:
             alerts.send(db, business, "Cash crunch predicted", message)
             alert_sent = True
+
+    # Every other alert (overdue customers, bills, loan installments, trial) and urgent ones by email.
+    services.refresh_notifications(db, business, fc, services.recovery_priority(db, business))
+    emailed = notify.send_pending_emails(db, business)
 
     return {
         "business_id": business.id,
@@ -53,6 +57,7 @@ def run_for_business(db: Session, business: Business) -> dict:
         "cash_crunch": fc["first_shortage"],
         "alert_sent": alert_sent,
         "alert_message": message,
+        "emailed": emailed,
     }
 
 

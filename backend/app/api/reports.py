@@ -13,8 +13,8 @@ from sqlalchemy.orm import Session
 from app import services
 from app.db import get_db
 from app.deps import audit, get_business, needs, owned, require_owner
-from app.models import Business, Goal, Notification
-from app.schemas import GoalIn, GoalOut, NotificationOut
+from app.models import Business, Goal
+from app.schemas import GoalIn, GoalOut
 
 router = APIRouter(tags=["reports"], dependencies=[Depends(require_owner), Depends(needs("reports"))])
 
@@ -116,20 +116,3 @@ def update_goal(goal_id: int, body: GoalIn, business: Business = Depends(get_bus
 def delete_goal(goal_id: int, business: Business = Depends(get_business), db: Session = Depends(get_db)):
     db.delete(owned(db, Goal, goal_id, business))
     db.commit()
-
-
-@router.get("/notifications", response_model=list[NotificationOut])
-def list_notifications(unread_only: bool = False, business: Business = Depends(get_business),
-                       db: Session = Depends(get_db)):
-    stmt = select(Notification).where(Notification.business_id == business.id)
-    if unread_only:
-        stmt = stmt.where(Notification.is_read.is_(False))
-    return db.scalars(stmt.order_by(Notification.created_at.desc()).limit(50)).all()
-
-
-@router.patch("/notifications/{notification_id}/read", response_model=NotificationOut)
-def mark_read(notification_id: int, business: Business = Depends(get_business), db: Session = Depends(get_db)):
-    n = owned(db, Notification, notification_id, business)
-    n.is_read = True
-    db.commit()
-    return n

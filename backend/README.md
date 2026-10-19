@@ -77,6 +77,7 @@ otherwise Gemini's free vision; the result is a suggestion the owner confirms.
 | Customers | `GET/POST /customers`, `GET /customers/{id}` |
 | Credit | `GET /credit-score`, `/credit-score/history` |
 | Loans | `GET /loan/readiness`, `/loan/recommendations` (all 8 loan types, eligible or not with the reason), `POST /loan/what-if`, `GET/POST /loans`, `GET/DELETE /loans/{id}`, `PATCH /repayments/{id}/paid` |
+| Notifications | `GET /notifications`, `/notifications/summary` (unread count), `POST /notifications/read-all`, `PATCH /notifications/{id}/read`, `DELETE /notifications/{id}`, `GET/PUT /notifications/preferences`. Owner only. Alerts: cash shortage, customers 30+ days late, invoices/bills/loan installments due within 3 days, trial ending. Each is raised once per cooldown; urgent ones can be emailed when Brevo is set up |
 | Reports | `GET /reports/pnl?month=YYYY-MM`, `/reports/insights`, `/reports/export` (PDF), `GET/POST/PUT/DELETE /goals`, `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Agent | `POST /agent/chat`, `POST /agent/chat/stream` (SSE), `GET /agent/history`, `/agent/suggestions` |
 | Team | `GET/POST /team`, `DELETE /team/{id}`, `POST /team/{id}/reactivate`, `POST /team/{id}/password` (owner only; staff can record transactions, customers and invoices only) |

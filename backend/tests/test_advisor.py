@@ -116,7 +116,7 @@ def test_daily_job_alerts_once_a_day(client, demo_headers):
     assert second["alert_sent"] is False and second["customers_scored"] == first["customers_scored"]
     db = SessionLocal()
     try:
-        assert db.query(Notification).filter(Notification.type == "cash_crunch").count() == 1
+        assert db.query(Notification).filter(Notification.type == "cash_shortage").count() == 1
         assert db.query(AuditLog).filter(AuditLog.action == "alert_sent").count() == 1
     finally:
         db.close()

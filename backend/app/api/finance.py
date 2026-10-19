@@ -58,7 +58,8 @@ def dashboard(business: Business = Depends(get_business), db: Session = Depends(
         "top_collections": [{k: r[k] for k in ("customer_id", "customer_name", "overdue_amount",
                                                  "max_days_overdue")} for r in ranked[:3]],
         "summary": templates.daily_summary(fc, ranked, credit, business.currency),
-        "notifications": [{"id": n.id, "type": n.type, "message": n.message} for n in unread],
+        "notifications": [{"id": n.id, "type": n.type, "message": n.message, "severity": n.severity, "link": n.link}
+                          for n in unread],
     }
 
 

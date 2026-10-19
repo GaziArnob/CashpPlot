@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import {
-  Bot, Compass, FileBarChart, Gauge, Handshake, Landmark, LayoutDashboard, LineChart, LogOut, NotebookTabs,
+  Bell, Bot, Compass, FileBarChart, Gauge, Handshake, Landmark, LayoutDashboard, LineChart, LogOut, NotebookTabs,
   Package, Receipt, Settings, Users, Wallet, type LucideIcon,
 } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 import { getToken, logout } from "@/lib/api";
 import { useMe } from "@/lib/hooks";
 
@@ -16,6 +17,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
   { title: "Overview", items: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/advisor", label: "Cash Advisor", icon: Compass },
+    { href: "/notifications", label: "Notifications", icon: Bell },
   ] },
   { title: "Money", items: [
     { href: "/transactions", label: "Transactions", icon: Receipt },
@@ -77,10 +79,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
-        <Link href="/" className="flex items-center gap-2 px-5 py-5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-600 text-white"><Wallet className="size-4" /></div>
-          <span className="text-lg font-semibold tracking-tight">CashPilot</span>
-        </Link>
+        <div className="flex items-center justify-between pr-3">
+          <Link href="/" className="flex items-center gap-2 px-5 py-5">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-600 text-white"><Wallet className="size-4" /></div>
+            <span className="text-lg font-semibold tracking-tight">CashPilot</span>
+          </Link>
+          {!staff && <NotificationBell />}
+        </div>
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-3">
           {groups.map((g) => (
             <div key={g.title}>
@@ -102,7 +107,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white md:hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <span className="font-semibold">CashPilot</span>
-            <button onClick={signOut} className="text-slate-500" aria-label="Sign out"><LogOut className="size-4" /></button>
+            <div className="flex items-center gap-1">
+              {!staff && <NotificationBell />}
+              <button onClick={signOut} className="p-2 text-slate-500" aria-label="Sign out"><LogOut className="size-4" /></button>
+            </div>
           </div>
           <nav className="flex gap-1 overflow-x-auto px-3 pb-2">
             {mobile.map(({ href, label }) => (

@@ -59,6 +59,9 @@ class Business(Base):
     # Where AI text may be produced: cloud = free hosted models (names masked), local = only a model on this
     # server, off = templates only.
     ai_mode: Mapped[str] = mapped_column(String(10), default="cloud", server_default="cloud")
+    # Notification types the owner switched off, and whether urgent alerts are also emailed (needs email set up).
+    muted_notifications: Mapped[list] = mapped_column(JSON, default=list)
+    notify_email: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     stripe_customer_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
@@ -247,6 +250,10 @@ class Notification(Base):
     type: Mapped[str] = mapped_column(String(30))
     message: Mapped[str] = mapped_column(String(500))
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+    severity: Mapped[str] = mapped_column(String(10), default="info", server_default="info")  # info | warning | critical
+    link: Mapped[str | None] = mapped_column(String(120), nullable=True)  # the page that explains or fixes it
+    dedupe_key: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)  # one alert per thing
+    emailed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 

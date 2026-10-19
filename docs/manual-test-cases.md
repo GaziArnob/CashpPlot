@@ -149,3 +149,16 @@ date,amount,type,category,description
 | J4 | Stripe | Manage billing → cancel | Plan returns to Free |
 | J5 | Plaid sandbox | Transactions → Connect a bank, login `user_good` / `pass_good` | Connected; Sync imports sample transactions once; Sync again adds none |
 | J6 | Plaid | Disconnect | Connection removed; imported transactions stay |
+
+## K. Notifications
+
+| # | Do this | Expect |
+|---|---|---|
+| K1 | Add an invoice due in 2 days, a bill due tomorrow and a bill due 3 days ago, then open the Dashboard | The bell shows an unread count; Alerts lists them. The late bill is marked urgent |
+| K2 | Click the bell | A dropdown with the latest alerts, "Mark all read" and "See all notifications" |
+| K3 | Click an alert | You go to the page that fixes it (Ledger, Loan Center...) and the unread count drops by one |
+| K4 | Reload the Dashboard several times | No duplicate alerts appear |
+| K5 | Notifications page: Unread tab, Mark read, Mark all read, X to dismiss | Each does what it says |
+| K6 | Settings → Notifications: untick "Invoices coming due", Save, add another invoice due soon, open the Dashboard | No new invoice alert |
+| K7 | Settings → Notifications: "Also email me urgent alerts" | Greyed out with a note until Brevo is set up; once it is, tick it and an urgent alert is emailed once |
+| K8 | Sign in as a staff member | No bell and no Notifications page |
