@@ -79,7 +79,7 @@ function Profile({ b, onSaved }: { b: Business; onSaved: () => void }) {
       <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
         <Field label="Business name"><input required className={INPUT} value={f.name} onChange={set("name")} /></Field>
         <Field label="Business type"><input className={INPUT} value={f.type} onChange={set("type")} /></Field>
-        <Field label="Currency (ISO code, e.g. USD, EUR, CNY or RMB, INR)"><input required maxLength={8} className={INPUT} value={f.currency} onChange={set("currency")} /></Field>
+        <Field label="Currency (ISO code, e.g. USD, EUR, CNY or RMB, INR)"><input required maxLength={8} list="currency-options" className={INPUT} value={f.currency} onChange={set("currency")} /><datalist id="currency-options">{["USD", "CNY", "RMB", "EUR", "GBP", "CAD", "AUD", "SGD", "INR"].map((c) => <option key={c} value={c} />)}</datalist></Field>
         <Field label="Safety cash threshold"><input type="number" min={0} className={INPUT} value={f.cash_threshold} onChange={set("cash_threshold")} /></Field>
         <Field label="Payment reminder tone">
           <select className={INPUT} value={f.reminder_tone} onChange={set("reminder_tone")}>
