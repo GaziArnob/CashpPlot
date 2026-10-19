@@ -5,7 +5,10 @@ credentials is "not configured" and nothing leaves the server; the owner then se
 """
 
 import re
+import smtplib
+import ssl
 from dataclasses import dataclass
+from email.message import EmailMessage
 
 import httpx
 
@@ -27,10 +30,20 @@ class Delivery:
     detail: str = ""
 
 
+def _brevo_ready() -> bool:
+    s = get_settings()
+    return bool(s.brevo_api_key and s.brevo_sender_email)
+
+
+def _smtp_ready() -> bool:
+    s = get_settings()
+    return bool(s.smtp_host and s.smtp_user and s.smtp_password)
+
+
 def configured_channels() -> dict[str, bool]:
     s = get_settings()
     return {
-        "email": bool(s.brevo_api_key and s.brevo_sender_email),
+        "email": _brevo_ready() or _smtp_ready(),
         "whatsapp": bool(s.whatsapp_token and s.whatsapp_phone_number_id),
         "sms": bool(s.twilio_account_sid and s.twilio_auth_token and s.twilio_from),
     }
@@ -59,6 +72,31 @@ def _email(to: str, subject: str, text: str) -> Delivery:
         raise DeliveryError("Could not reach Brevo")
     _check(r, "Brevo")
     return Delivery(True, "brevo")
+
+
+def _smtp(to: str, subject: str, text: str) -> Delivery:
+    """Send through any SMTP mailbox. Port 465 uses SSL from the start, anything else upgrades with STARTTLS."""
+    s = get_settings()
+    msg = EmailMessage()
+    msg["From"] = f"{s.brevo_sender_name or 'CashPilot'} <{s.smtp_from or s.smtp_user}>"
+    msg["To"] = to
+    msg["Subject"] = " ".join(subject.split())[:200]       # no line breaks: they could add headers
+    msg.set_content(text)
+    try:
+        if s.smtp_port == 465:
+            server = smtplib.SMTP_SSL(s.smtp_host, s.smtp_port, timeout=TIMEOUT, context=ssl.create_default_context())
+        else:
+            server = smtplib.SMTP(s.smtp_host, s.smtp_port, timeout=TIMEOUT)
+        with server:
+            if s.smtp_port != 465:
+                server.starttls(context=ssl.create_default_context())
+            server.login(s.smtp_user, s.smtp_password)
+            server.send_message(msg)
+    except smtplib.SMTPAuthenticationError:
+        raise DeliveryError("The email server refused the username or password")
+    except (smtplib.SMTPException, OSError):
+        raise DeliveryError("Could not send the email")
+    return Delivery(True, "smtp")
 
 
 def _whatsapp(to: str, text: str, params: list[str]) -> Delivery:
@@ -111,7 +149,7 @@ def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: s
     if channel == "email":
         if not (to_email and EMAIL.match(to_email)):
             raise ValueError("This customer has no email address on file")
-        return _email(to_email, subject, text)
+        return _email(to_email, subject, text) if _brevo_ready() else _smtp(to_email, subject, text)
     phone = normalize_phone(to_phone)
     if phone is None:
         raise ValueError("This customer has no phone number on file in international format, e.g. +14155550123")

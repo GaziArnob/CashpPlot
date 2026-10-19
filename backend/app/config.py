@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     brevo_api_key: str = ""  # email, https://www.brevo.com
     brevo_sender_email: str = ""  # a sender verified in Brevo
     brevo_sender_name: str = "CashPilot"
+    # Plain SMTP: any mailbox works, including a free Gmail one (smtp.gmail.com, port 587, an app password).
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""  # defaults to smtp_user
     whatsapp_token: str = ""  # Meta WhatsApp Cloud API access token
     whatsapp_phone_number_id: str = ""
     whatsapp_template_name: str = ""  # an approved template; lets a reminder reach customers who have not messaged you

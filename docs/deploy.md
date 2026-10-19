@@ -41,7 +41,8 @@ Each one is off until its keys are set in Render, and none of them acts without 
 
 | Service | Set these | What it enables |
 | --- | --- | --- |
-| Email reminders, https://www.brevo.com | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL` (a sender verified in Brevo) | The reminder dialog's Email channel delivers the message |
+| Email reminders, free with any mailbox (e.g. Gmail) | `SMTP_HOST`, `SMTP_PORT` (587, or 465 for SSL), `SMTP_USER`, `SMTP_PASSWORD`, optional `SMTP_FROM` | The reminder dialog's Email channel delivers the message. For Gmail: turn on 2-step verification, then Google Account → Security → App passwords, and use that 16-character password as `SMTP_PASSWORD` (host `smtp.gmail.com`). Gmail allows about 500 messages a day |
+| Email reminders through Brevo instead, https://www.brevo.com (used first when set; it also has a free plan, check its pricing page) | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL` (a sender verified in Brevo) | The reminder dialog's Email channel delivers the message |
 | WhatsApp, https://developers.facebook.com/docs/whatsapp/cloud-api | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and for real customers `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANG` | WhatsApp channel. Without a template, free-form text only reaches people who messaged the business in the last 24 hours, plus test numbers. See "WhatsApp template" below |
 | SMS, https://www.twilio.com | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | SMS channel. Customer phone numbers must be in international format, e.g. `+14155550123` |
 | Pro payments, https://stripe.com | `BILLING_MODE=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Settings → Upgrade to Pro opens Stripe Checkout |

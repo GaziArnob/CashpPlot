@@ -124,3 +124,122 @@ def test_whatsapp_uses_the_approved_template_when_one_is_set(client, demo_header
 
 def test_whatsapp_template_variables_have_no_line_breaks():
     assert messaging._clean("Hello\n\n  there\t  you") == "Hello there you"
+
+
+# Email through plain SMTP (a free Gmail mailbox works)
+
+class FakeSMTP:
+    sent = []
+    mode = "ok"
+    kind = "smtp"
+
+    def __init__(self, host, port, timeout=None, context=None):
+        self.log = {"kind": type(self).kind, "host": host, "port": port, "starttls": False}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def starttls(self, context=None):
+        self.log["starttls"] = True
+
+    def login(self, user, password):
+        import smtplib
+        if FakeSMTP.mode == "auth":
+            raise smtplib.SMTPAuthenticationError(535, b"bad credentials")
+        self.log["user"] = user
+
+    def send_message(self, msg):
+        import smtplib
+        if FakeSMTP.mode == "down":
+            raise smtplib.SMTPException("server unavailable")
+        FakeSMTP.sent.append({**self.log, "to": msg["To"], "from": msg["From"], "subject": msg["Subject"],
+                              "body": msg.get_content()})
+
+
+class FakeSMTPSSL(FakeSMTP):
+    kind = "ssl"
+
+
+@pytest.fixture()
+def gmail(monkeypatch):
+    import smtplib
+    s = get_settings()
+    for k, v in dict(brevo_api_key="", smtp_host="smtp.gmail.com", smtp_port=587, smtp_user="owner@gmail.com",
+                     smtp_password="app-password", smtp_from="").items():
+        monkeypatch.setattr(s, k, v)
+    FakeSMTP.sent, FakeSMTP.mode = [], "ok"
+    monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
+    monkeypatch.setattr(smtplib, "SMTP_SSL", FakeSMTPSSL)
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: pytest.fail("Brevo must not be used when only SMTP is set"))
+    return FakeSMTP
+
+
+def test_smtp_alone_turns_email_on_and_sends_the_owners_text(client, demo_headers, gmail):
+    assert client.get("/messaging/channels", headers=demo_headers).json()["email"] is True
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers,
+                    json={"channel": "email", "message": "Please pay when you can.\nThanks"})
+    assert r.status_code == 200 and r.json()["delivery"] == "delivered"
+    mail = gmail.sent[-1]
+    assert mail["kind"] == "smtp" and mail["host"] == "smtp.gmail.com" and mail["starttls"] and mail["user"] == "owner@gmail.com"
+    assert mail["to"] == "buyer@example.com" and "owner@gmail.com" in mail["from"]
+    assert mail["body"].startswith("Please pay when you can.") and "Payment reminder from" in mail["subject"]
+
+
+def test_smtp_on_port_465_uses_ssl_from_the_start(client, demo_headers, gmail, monkeypatch):
+    monkeypatch.setattr(get_settings(), "smtp_port", 465)
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    assert client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"}).status_code == 200
+    assert gmail.sent[-1]["kind"] == "ssl" and gmail.sent[-1]["starttls"] is False
+
+
+def test_smtp_failures_keep_the_draft_and_say_why(client, demo_headers, gmail):
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    gmail.mode = "auth"
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"})
+    assert r.status_code == 502 and "username or password" in r.json()["detail"]
+    gmail.mode = "down"
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"})
+    assert r.status_code == 502 and "Nothing was sent" in r.json()["detail"]
+    assert next(x for x in client.get("/reminders", headers=demo_headers).json() if x["id"] == reminder["id"])["status"] == "draft"
+    assert gmail.sent == []
+
+
+def test_brevo_wins_when_both_are_set(client, demo_headers, live, monkeypatch):
+    import smtplib
+    s = get_settings()
+    monkeypatch.setattr(s, "smtp_host", "smtp.gmail.com")
+    monkeypatch.setattr(s, "smtp_user", "owner@gmail.com")
+    monkeypatch.setattr(s, "smtp_password", "x")
+    monkeypatch.setattr(smtplib, "SMTP", lambda *a, **k: pytest.fail("SMTP used although Brevo is set"))
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    assert client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"}).status_code == 200
+    assert "api.brevo.com" in live[-1][0]
+
+
+def test_incomplete_smtp_settings_do_not_enable_email(client, demo_headers, monkeypatch):
+    s = get_settings()
+    for k, v in dict(brevo_api_key="", smtp_host="smtp.gmail.com", smtp_user="owner@gmail.com", smtp_password="").items():
+        monkeypatch.setattr(s, k, v)
+    assert client.get("/messaging/channels", headers=demo_headers).json()["email"] is False
+
+
+def test_the_email_subject_cannot_carry_extra_headers():
+    import smtplib
+    FakeSMTP.sent, FakeSMTP.mode = [], "ok"
+    s = get_settings()
+    saved = (s.smtp_host, s.smtp_user, s.smtp_password, s.brevo_api_key, smtplib.SMTP)
+    s.smtp_host, s.smtp_user, s.smtp_password, s.brevo_api_key = "h", "u@example.com", "p", ""
+    smtplib.SMTP = FakeSMTP
+    try:
+        messaging.send("email", to_email="a@example.com", to_phone=None, subject="Hi\r\nBcc: evil@example.com", text="x")
+    finally:
+        s.smtp_host, s.smtp_user, s.smtp_password, s.brevo_api_key, smtplib.SMTP = saved
+    assert FakeSMTP.sent[-1]["subject"] == "Hi Bcc: evil@example.com"
