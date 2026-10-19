@@ -117,8 +117,9 @@ def loan_readiness(business: Business = Depends(get_business), db: Session = Dep
 @router.get("/loan/recommendations", dependencies=CREDIT)
 def loan_recommendations(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     r = services.loan_recommendation(db, business)
-    return {"options": r["options"], "max_recommended_amount": r["max_recommended_amount"],
-            "disclaimer": r["disclaimer"]}
+    return {"options": r["options"], "catalog": r["catalog"], "score": r["score"],
+            "safe_monthly_installment": r["safe_monthly_installment"],
+            "max_recommended_amount": r["max_recommended_amount"], "disclaimer": r["disclaimer"]}
 
 
 @router.post("/loan/what-if", dependencies=CREDIT)

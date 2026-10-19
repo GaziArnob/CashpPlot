@@ -215,3 +215,11 @@ export type WhatIf = {
 export type AgentReply = {
   answer: string; provider: string; tools_used: string[]; grounded: boolean; unverified_figures: string[];
 };
+
+export type LoanCatalogItem = {
+  product_id: number; name: string; lender: string; kind: string; rate: number; tenure_months: number;
+  min_amount: number; max_amount: number; min_score: number;
+  status: "eligible" | "capacity_too_low" | "score_too_low";
+  reason?: string; points_needed?: number; monthly_needed?: number;
+  recommended_amount?: number; monthly_installment?: number; total_interest?: number; cost_per_100?: number | null;
+};

@@ -89,17 +89,6 @@ RECURRING = [
     ("Electricity and internet", "Utilities", 4_500, 10),
     ("Owner's monthly withdrawal", "Owner drawings", 75_000, 28),
 ]
-LOAN_PRODUCTS = [
-    # name, lender, kind, min, max, rate, tenure, min_score
-    ("SME Working Capital", "Harbor SME Bank", "working_capital", 100_000, 1_500_000, 11.0, 12, 650),
-    ("SME Term Loan", "Harbor SME Bank", "sme_term", 300_000, 5_000_000, 12.5, 36, 700),
-    ("Small Business Booster", "Summit Bank", "working_capital", 50_000, 800_000, 13.0, 18, 600),
-    ("Retail Growth Loan", "Summit Bank", "sme_term", 50_000, 1_000_000, 9.0, 24, 600),
-    ("Shop Expansion Loan", "River Finance", "sme_term", 100_000, 2_000_000, 14.5, 24, 580),
-    ("Micro Enterprise Loan", "Lotus Microfinance", "microfinance", 20_000, 300_000, 22.0, 12, 500),
-    ("Seasonal Stock Loan", "Lotus Microfinance", "microfinance", 30_000, 400_000, 20.0, 6, 520),
-    ("Quick Trade Credit", "River Finance", "working_capital", 25_000, 500_000, 18.0, 9, 550),
-]
 
 
 def add_months(d: date, months: int) -> date:
@@ -355,9 +344,7 @@ def seed(today: date | None = None, rng_seed: int = 42) -> dict:
         db.add(FinancingOffer(provider=o[0], name=o[1], kind=o[2], advance_rate_pct=o[3], fee_pct=o[4],
                               monthly_rate_pct=o[5], min_amount=o[6], max_amount=o[7], max_days=o[8],
                               lead_days=o[9], is_demo=True))
-    for p in LOAN_PRODUCTS:
-        db.add(LoanProduct(name=p[0], lender=p[1], kind=p[2], min_amount=p[3], max_amount=p[4], rate=p[5],
-                           tenure_months=p[6], min_score=p[7]))
+    # The loan catalog already exists: migration 0007 inserts it into any empty database.
     db.add(Goal(business_id=bid, title="Emergency cash reserve", target_amount=200_000, current_amount=65_000,
                 deadline=add_months(today, 6)))
     db.add(Goal(business_id=bid, title="Second delivery van", target_amount=600_000, current_amount=120_000,

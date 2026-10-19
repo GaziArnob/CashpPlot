@@ -84,27 +84,35 @@ def checklist(data: BusinessData, today: date, cap: dict, credit: dict) -> list[
     return items
 
 
+def evaluate(p: dict, score: int, safe_emi: float) -> dict:
+    """One loan type for one business: can it take it, how much, and if not, exactly why not."""
+    base = {"product_id": p["id"], "name": p["name"], "lender": p["lender"], "kind": p["kind"], "rate": p["rate"],
+            "tenure_months": p["tenure_months"], "min_amount": p["min_amount"], "max_amount": p["max_amount"],
+            "min_score": p["min_score"]}
+    if p["min_score"] > score:
+        return {**base, "status": "score_too_low", "points_needed": p["min_score"] - score,
+                "reason": f"Needs a credit score of {p['min_score']}. Yours is {score}, so {p['min_score'] - score} points to go."}
+    pmax = max_principal(safe_emi, p["rate"], p["tenure_months"])
+    if pmax < p["min_amount"]:
+        needed = emi(p["min_amount"], p["rate"], p["tenure_months"])
+        return {**base, "status": "capacity_too_low", "monthly_needed": round(needed),
+                "reason": f"Your score qualifies, but the smallest loan ({p['min_amount']:,}) needs about "
+                          f"{round(needed):,} a month and you can safely repay {round(safe_emi):,}."}
+    amount = min(pmax, p["max_amount"])
+    monthly = emi(amount, p["rate"], p["tenure_months"])
+    total_interest = monthly * p["tenure_months"] - amount
+    return {**base, "status": "eligible", "recommended_amount": round(amount, -2) or round(amount),
+            "monthly_installment": round(monthly), "total_interest": round(total_interest),
+            "cost_per_100": round(100 * total_interest / amount, 2) if amount else None}
+
+
 def recommend(data: BusinessData, today: date, credit: dict, products: list[dict]) -> dict:
     cap = capacity(data, today, credit["band"])
     s = credit["score"]
-    options = []
-    for p in products:
-        if p["min_score"] > s:
-            continue
-        pmax = max_principal(cap["safe_emi"], p["rate"], p["tenure_months"])
-        if pmax < p["min_amount"]:
-            continue
-        amount = min(pmax, p["max_amount"])
-        monthly = emi(amount, p["rate"], p["tenure_months"])
-        total_interest = monthly * p["tenure_months"] - amount
-        options.append({
-            "product_id": p["id"], "name": p["name"], "lender": p["lender"], "kind": p["kind"],
-            "rate": p["rate"], "tenure_months": p["tenure_months"],
-            "recommended_amount": round(amount, -2), "monthly_installment": round(monthly),
-            "total_interest": round(total_interest),
-            "cost_per_100": round(100 * total_interest / amount, 2) if amount else None,
-        })
-    options.sort(key=lambda o: (o["cost_per_100"] is None, o["cost_per_100"]))
+    catalog = [evaluate(p, s, cap["safe_emi"]) for p in products]
+    rank = {"eligible": 0, "capacity_too_low": 1, "score_too_low": 2}
+    catalog.sort(key=lambda o: (rank[o["status"]], o.get("cost_per_100") if o["status"] == "eligible" else 0, o["min_score"]))
+    options = [o for o in catalog if o["status"] == "eligible"]
 
     best_amount = max((o["recommended_amount"] for o in options), default=0)
     ready = bool(options) and cap["safe_emi"] > 0
@@ -116,6 +124,7 @@ def recommend(data: BusinessData, today: date, credit: dict, products: list[dict
         "max_recommended_amount": best_amount,
         "capacity": cap,
         "options": options,
+        "catalog": catalog,
         "checklist": checklist(data, today, cap, credit),
         "disclaimer": DISCLAIMER,
     }

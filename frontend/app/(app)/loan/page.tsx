@@ -8,11 +8,11 @@ import { api } from "@/lib/api";
 import { money } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { IntroduceModal, ReferralsCard } from "@/components/Referrals";
-import type { LoanOption, LoanReadiness, WhatIf } from "@/lib/types";
+import type { LoanCatalogItem, LoanOption, LoanReadiness, WhatIf } from "@/lib/types";
 
 export default function LoanPage() {
   const readiness = useApi<LoanReadiness>("/loan/readiness");
-  const recs = useApi<{ options: LoanOption[] }>("/loan/recommendations");
+  const recs = useApi<{ options: LoanOption[]; catalog: LoanCatalogItem[] }>("/loan/recommendations");
   const [intro, setIntro] = useState<LoanOption | null>(null);
   const [refKey, setRefKey] = useState(0);
   if (readiness.loading && !readiness.data) return <Loading />;
@@ -35,41 +35,43 @@ export default function LoanPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Card className="overflow-x-auto p-0 xl:col-span-2">
-          <div className="px-5 pt-5"><CardTitle>Matching financing options (lowest cost first)</CardTitle></div>
+        <div className="xl:col-span-2">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-slate-700">Loan types: which you can take, and what is missing for the rest</h2>
+            <span className="text-xs text-slate-500">Sample products, not real offers, until lenders are connected</span>
+          </div>
           {recs.loading && !recs.data ? <Loading /> : (
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-y border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-2.5 font-medium">Product</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Amount</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Rate</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Monthly</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Total interest</th>
-                  <th className="px-5 py-2.5"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {(recs.data?.options ?? []).map((o, i) => (
-                  <tr key={o.product_id}>
-                    <td className="px-5 py-3">
-                      <p className="font-medium">{o.name} {i === 0 && <Badge color="green">lowest cost</Badge>}</p>
-                      <p className="text-xs text-slate-500">{o.lender} · {o.tenure_months} months</p>
-                    </td>
-                    <td className="px-3 py-3 text-right font-semibold tabular">{money(o.recommended_amount)}</td>
-                    <td className="px-3 py-3 text-right tabular">{o.rate}%</td>
-                    <td className="px-3 py-3 text-right tabular">{money(o.monthly_installment)}</td>
-                    <td className="px-3 py-3 text-right tabular">{money(o.total_interest)}</td>
-                    <td className="px-5 py-3 text-right"><Button variant="secondary" onClick={() => setIntro(o)}>Request intro</Button></td>
-                  </tr>
-                ))}
-                {recs.data && recs.data.options.length === 0 && (
-                  <tr><td colSpan={6} className="px-5 py-6 text-center text-slate-500">No product fits safely yet. Work through the checklist first.</td></tr>
-                )}
-              </tbody>
-            </table>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(recs.data?.catalog ?? []).map((c) => {
+                const ok = c.status === "eligible";
+                const option = recs.data?.options.find((o) => o.product_id === c.product_id);
+                return (
+                  <Card key={c.product_id} className={ok ? "border-emerald-300" : "bg-slate-50"}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">{c.name}</p>
+                        <p className="text-xs text-slate-500">{c.lender} · {c.tenure_months} months · {c.rate}% a year</p>
+                      </div>
+                      {ok ? <Badge color="green">You can take this</Badge>
+                        : c.status === "score_too_low" ? <Badge color="amber">Score {c.min_score}+ needed</Badge>
+                        : <Badge color="slate">Too small to repay</Badge>}
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">From {money(c.min_amount)} to {money(c.max_amount)}</p>
+                    {ok && option ? (
+                      <>
+                        <p className="mt-3 text-2xl font-semibold tabular">{money(option.recommended_amount)}</p>
+                        <p className="text-xs text-slate-600">{money(option.monthly_installment)} a month · {money(option.total_interest)} total interest</p>
+                        <div className="mt-3"><Button variant="secondary" onClick={() => setIntro(option)}>Request intro</Button></div>
+                      </>
+                    ) : (
+                      <p className="mt-3 text-sm text-slate-600">{c.reason}</p>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
           )}
-        </Card>
+        </div>
 
         <Card>
           <CardTitle>Readiness checklist</CardTitle>
