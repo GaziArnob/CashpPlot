@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Bell, Check, X } from "lucide-react";
-import { SEVERITY, when, type Alert } from "@/components/NotificationBell";
+import { SEVERITY, when, type Alert } from "@/lib/alerts";
 import { Badge, Button, Card, ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useApi } from "@/lib/hooks";

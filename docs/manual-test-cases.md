@@ -154,15 +154,15 @@ date,amount,type,category,description
 
 | # | Do this | Expect |
 |---|---|---|
-| K1 | Add an invoice due in 2 days, a bill due tomorrow and a bill due 3 days ago, then open the Dashboard | The bell shows an unread count; Alerts lists them. The late bill is marked urgent |
-| K2 | Click the bell | A dropdown with the latest alerts, "Mark all read" and "See all notifications" |
-| K3 | Click an alert | You go to the page that fixes it (Ledger, Loan Center...) and the unread count drops by one |
+| K1 | Add an invoice due in 2 days, a bill due tomorrow and a bill due 3 days ago, then open the Dashboard | A red unread count appears beside Notifications in the left menu; the Dashboard's Alerts card lists them. The late bill is marked urgent |
+| K2 | Open Notifications in the left menu | The full list, with Unread / All tabs, Mark all read and an X on each row |
+| K3 | Click Open on an alert | You go to the page that fixes it (Ledger, Loan Center...) and the unread count drops by one |
 | K4 | Reload the Dashboard several times | No duplicate alerts appear |
 | K5 | Notifications page: Unread tab, Mark read, Mark all read, X to dismiss | Each does what it says |
 | K6 | Settings → Notifications: untick "Invoices coming due", Save, add another invoice due soon, open the Dashboard | No new invoice alert |
 | K7 | Settings → Notifications: "Also email me urgent alerts" | Greyed out with a note until Brevo is set up; once it is, tick it and an urgent alert is emailed once |
 | K8 | Sign in as a staff member | No bell and no Notifications page |
-| K9 | The bell sits at the top right of every page on a desktop; on a phone it is in the top bar | Yes |
+| K9 | Look at the top right of any page | No bell: notifications live in the left menu, with the unread count beside the link |
 | K10 | Create a product with 100 in stock and record two sales of 45 in the last 3 weeks | A "will run out in about N days" alert (Products running low) |
 | K11 | Add an invoice due 10 days ago | "Invoice #N from X is 10 days late" (separate from the 30+ day customer alert) |
 | K12 | Add a bill due 3 days ago | An urgent "was due" alert |
@@ -188,12 +188,3 @@ date,amount,type,category,description
 | M3 | Add a loan or bill and pay it on time | The "Pay your next 3 bills on time" step shrinks or goes away as your repayment record builds |
 | M4 | A business already in the Excellent band | "You are in the top band" and no next band |
 | M5 | A brand-new account | The card lists what data to add; no invented gains |
-
-## N. Notification bell buttons
-
-| # | Do this | Expect |
-|---|---|---|
-| N1 | Click the bell (top right) | The dropdown has two buttons at the top: **View all** and **Mark all read**, and a count like "3 unread · 14 in all" |
-| N2 | Click **View all** | The Notifications page lists every notification, not just the latest 6 |
-| N3 | Click **Mark all read** | The unread badge disappears; the button is greyed out when nothing is unread |
-| N4 | With more than 6 notifications | The dropdown says "Showing the latest 6 of N" |

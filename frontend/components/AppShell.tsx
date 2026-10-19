@@ -7,7 +7,7 @@ import {
   Bell, Bot, Compass, FileBarChart, Gauge, Handshake, Landmark, LayoutDashboard, LineChart, LogOut, NotebookTabs,
   Package, Receipt, Settings, Users, Wallet, type LucideIcon,
 } from "lucide-react";
-import NotificationBell from "@/components/NotificationBell";
+import UnreadBadge from "@/components/UnreadBadge";
 import { getToken, logout } from "@/lib/api";
 import { useMe } from "@/lib/hooks";
 
@@ -73,6 +73,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
         pathname.startsWith(href) ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-100"}`}>
       <Icon className="size-4" /> {label}
+      {href === "/notifications" && !staff && <UnreadBadge />}
     </Link>
   );
 
@@ -104,10 +105,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white md:hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <span className="font-semibold">CashPilot</span>
-            <div className="flex items-center gap-1">
-              {!staff && <NotificationBell />}
-              <button onClick={signOut} className="p-2 text-slate-500" aria-label="Sign out"><LogOut className="size-4" /></button>
-            </div>
+            <button onClick={signOut} className="text-slate-500" aria-label="Sign out"><LogOut className="size-4" /></button>
           </div>
           <nav className="flex gap-1 overflow-x-auto px-3 pb-2">
             {mobile.map(({ href, label }) => (
@@ -119,11 +117,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
         </header>
-        {!staff && (
-          <div className="sticky top-0 z-20 hidden justify-end border-b border-slate-200 bg-white/90 px-8 py-2 backdrop-blur md:flex">
-            <NotificationBell />
-          </div>
-        )}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
       </div>
     </div>
