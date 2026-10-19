@@ -249,3 +249,44 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   body::after { animation: none; }
 }
+
+/* ---------- same look inside the app: glass cards over the animated background ---------- */
+.bg-white.rounded-xl,
+.bg-white.rounded-2xl {
+  background-color: rgb(var(--ff-surface) / 0.66);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 0 0 1px rgb(var(--ff-edge-strong) / 0.55),
+    0 14px 32px -14px rgb(0 0 0 / 0.6);
+}
+.bg-white.rounded-xl:hover,
+.bg-white.rounded-2xl:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
+    0 0 0 1px rgb(var(--ff-brand) / 0.55),
+    0 18px 38px -14px rgb(var(--ff-brand) / 0.35);
+}
+/* dialogs and tall panels stay solid and do not float away under the pointer */
+.ff-pop.bg-white, .ff-pop.bg-white:hover { background-color: rgb(var(--ff-surface)); transform: none; }
+.overflow-x-auto.bg-white:hover, table.bg-white:hover { transform: none; }
+
+/* sidebar and top bar: glass, with a glowing active link */
+aside { box-shadow: 1px 0 0 rgb(var(--ff-edge) / 0.6), 12px 0 40px -20px rgb(var(--ff-brand) / 0.35); }
+aside nav a[class*="shadow-[inset"] {
+  background-image: linear-gradient(90deg, rgb(var(--ff-brand) / 0.28), transparent 85%);
+}
+
+/* the cash-shortage banner and other alert boxes breathe softly */
+@keyframes ff-breathe { 50% { box-shadow: 0 0 0 1px rgb(var(--ff-danger) / 0.45), 0 0 28px -6px rgb(var(--ff-danger) / 0.45); } }
+.border-rose-200.bg-rose-50 { animation: ff-breathe 3.2s ease-in-out infinite; }
+
+/* page titles shimmer once on load */
+@keyframes ff-title { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.ff-gradient-text { background-size: 220% 100%; animation: ff-title 1.4s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .border-rose-200.bg-rose-50, .ff-gradient-text { animation: none; }
+}
