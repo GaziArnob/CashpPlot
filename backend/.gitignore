@@ -6,3 +6,6 @@ __pycache__/
 alerts.log
 .pytest_cache/
 .env.postgres
+.env.neon
+.env.*
+!.env.example
