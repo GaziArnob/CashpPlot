@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, History, Info, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, History, Info, Plus, ShieldCheck } from "lucide-react";
 import BalanceChart from "@/components/BalanceChart";
 import { DraftsSection, PlansSection } from "@/components/payables/PlansAndDrafts";
 import PlanModal from "@/components/payables/PlanModal";
+import { AddBillModal, AddSupplierModal } from "@/components/QuickAdd";
 import { Badge, Button, Card, CardTitle, ErrorBox, Loading, PageHeader, Stat } from "@/components/ui";
 import { api } from "@/lib/api";
 import { longDate, money, shortDate } from "@/lib/format";
@@ -145,7 +146,7 @@ function Upcoming({ a, onPlan }: { a: PayablesAnalysis; onPlan: (b: UpcomingBill
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <Card>
         <CardTitle right={<Badge color="blue">confirmed</Badge>}>Upcoming payments</CardTitle>
-        {a.upcoming_bills.length === 0 ? <p className="text-sm text-slate-500">No unpaid supplier bills.</p> : (
+        {a.upcoming_bills.length === 0 ? <p className="text-sm text-slate-500">No unpaid supplier bills. Press “Add bill” above, then make a payment plan for it here.</p> : (
           <ul className="divide-y divide-slate-100">
             {a.upcoming_bills.map((b) => (
               <li key={b.bill_id} className="flex flex-wrap items-center gap-3 py-3">
@@ -217,6 +218,7 @@ function History_({ onOpen }: { onOpen?: () => void }) {
 export default function PayablesPage() {
   const analysis = useApi<PayablesAnalysis>("/payables/analysis");
   const [planFor, setPlanFor] = useState<UpcomingBill | null>(null);
+  const [adding, setAdding] = useState<"supplier" | "bill" | null>(null);
   const [draftKey, setDraftKey] = useState(0);
   const [historyKey, setHistoryKey] = useState(0);
   const [amount, setAmount] = useState("");
@@ -244,7 +246,13 @@ export default function PayablesPage() {
   return (
     <>
       <PageHeader title="Supplier Payments & Financing"
-        subtitle="Spot payment clashes early, plan with your suppliers, and compare the cost of financing" />
+        subtitle="Spot payment clashes early, plan with your suppliers, and compare the cost of financing"
+        right={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => setAdding("supplier")}><Plus className="size-4" /> Add supplier</Button>
+            <Button onClick={() => setAdding("bill")}><Plus className="size-4" /> Add bill</Button>
+          </div>
+        } />
 
       <div className="mb-6 flex items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 px-5 py-3 text-sm text-sky-900">
         <ShieldCheck className="mt-0.5 size-4 shrink-0" />
@@ -316,6 +324,8 @@ export default function PayablesPage() {
 
       <History_ key={historyKey} />
 
+      {adding === "supplier" && <AddSupplierModal onClose={() => setAdding(null)} onSaved={onChanged} />}
+      {adding === "bill" && <AddBillModal onClose={() => setAdding(null)} onSaved={onChanged} />}
       {planFor && (
         <PlanModal bill={planFor} options={options.get(planFor.bill_id) ?? []} currency={cur}
           onClose={() => setPlanFor(null)} onSaved={onChanged} />
