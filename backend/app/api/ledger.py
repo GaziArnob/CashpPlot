@@ -138,10 +138,14 @@ def send_reminder(reminder_id: int, body: ReminderSendIn, business: Business = D
     delivered; if not, it is only recorded as sent and the owner sends the text themselves (`delivery: manual`)."""
     r = owned(db, Reminder, reminder_id, business)
     text = body.message or r.message
-    customer = db.get(Invoice, r.invoice_id).customer
+    invoice = db.get(Invoice, r.invoice_id)
+    customer = invoice.customer
     try:
         result = messaging.send(body.channel, to_email=customer.email, to_phone=customer.phone,
-                                subject=f"Payment reminder from {business.name}", text=text)
+                                subject=f"Payment reminder from {business.name}", text=text,
+                                template_params=[customer.name, business.name,
+                                                 templates.money(round(invoice.outstanding), business.currency),
+                                                 invoice.due_date.isoformat()])
     except ValueError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
     except messaging.DeliveryError as e:

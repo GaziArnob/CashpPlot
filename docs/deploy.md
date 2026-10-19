@@ -42,10 +42,22 @@ Each one is off until its keys are set in Render, and none of them acts without 
 | Service | Set these | What it enables |
 | --- | --- | --- |
 | Email reminders, https://www.brevo.com | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL` (a sender verified in Brevo) | The reminder dialog's Email channel delivers the message |
-| WhatsApp, https://developers.facebook.com/docs/whatsapp/cloud-api | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp channel. Free-form text only reaches people who messaged the business in the last 24 hours, plus test numbers; anything else needs an approved template |
+| WhatsApp, https://developers.facebook.com/docs/whatsapp/cloud-api | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and for real customers `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANG` | WhatsApp channel. Without a template, free-form text only reaches people who messaged the business in the last 24 hours, plus test numbers. See "WhatsApp template" below |
 | SMS, https://www.twilio.com | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | SMS channel. Customer phone numbers must be in international format, e.g. `+14155550123` |
 | Pro payments, https://stripe.com | `BILLING_MODE=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Settings → Upgrade to Pro opens Stripe Checkout |
 | Bank import, https://plaid.com | `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox` | Transactions → Connect a bank. Sandbox uses sample banks only |
+
+### WhatsApp template
+
+To reach a customer who has not messaged you, WhatsApp requires an approved template. In Meta's WhatsApp Manager create
+a **Utility** template (for example named `payment_reminder`, language English) with exactly four variables:
+
+> Hi {{1}}, a reminder from {{2}}: {{3}} was due on {{4}}. Please pay when you can, and reply here if you have a question.
+
+Once Meta approves it, set `WHATSAPP_TEMPLATE_NAME=payment_reminder` and `WHATSAPP_TEMPLATE_LANG=en` (match the
+language you chose, e.g. `en_US`). CashPilot then fills {{1}} customer name, {{2}} your business, {{3}} the amount
+and {{4}} the due date. The wording sent is the template's: an edit you make in the reminder box is not used for
+WhatsApp. Meta charges per conversation outside its free allowance, so check its pricing page.
 
 ### Stripe
 

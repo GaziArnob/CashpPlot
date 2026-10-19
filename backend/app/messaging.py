@@ -61,18 +61,32 @@ def _email(to: str, subject: str, text: str) -> Delivery:
     return Delivery(True, "brevo")
 
 
-def _whatsapp(to: str, text: str) -> Delivery:
+def _whatsapp(to: str, text: str, params: list[str]) -> Delivery:
+    """With WHATSAPP_TEMPLATE_NAME set, send that approved template (it can reach anyone). Otherwise send free
+    text, which WhatsApp only delivers inside 24 hours of the customer's own message (and to test numbers)."""
     s = get_settings()
+    if s.whatsapp_template_name:
+        body = {"messaging_product": "whatsapp", "to": to.lstrip("+"), "type": "template",
+                "template": {"name": s.whatsapp_template_name, "language": {"code": s.whatsapp_template_lang},
+                             "components": [{"type": "body", "parameters": [
+                                 {"type": "text", "text": _clean(p)} for p in params]}] if params else []}}
+        note = "Sent with the approved template, so the wording is the template's, not your edited text."
+    else:
+        body = {"messaging_product": "whatsapp", "to": to.lstrip("+"), "type": "text", "text": {"body": text}}
+        note = ("Free-form text only reaches people who messaged the business in the last 24 hours (or test numbers); "
+                "set WHATSAPP_TEMPLATE_NAME to reach anyone.")
     try:
         r = httpx.post(f"https://graph.facebook.com/v21.0/{s.whatsapp_phone_number_id}/messages", timeout=TIMEOUT,
-                       headers={"Authorization": f"Bearer {s.whatsapp_token}"},
-                       json={"messaging_product": "whatsapp", "to": to.lstrip("+"), "type": "text",
-                             "text": {"body": text}})
+                       headers={"Authorization": f"Bearer {s.whatsapp_token}"}, json=body)
     except httpx.HTTPError:
         raise DeliveryError("Could not reach WhatsApp")
     _check(r, "WhatsApp")
-    return Delivery(True, "whatsapp", "Free-form text only reaches people who messaged the business in the last 24 hours "
-                                       "(or test numbers); otherwise an approved template is needed.")
+    return Delivery(True, "whatsapp", note)
+
+
+def _clean(value: str) -> str:
+    """Template variables may not hold line breaks, tabs or long runs of spaces."""
+    return " ".join(str(value).split())[:200]
 
 
 def _sms(to: str, text: str) -> Delivery:
@@ -86,7 +100,8 @@ def _sms(to: str, text: str) -> Delivery:
     return Delivery(True, "twilio")
 
 
-def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: str, text: str) -> Delivery:
+def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: str, text: str,
+         template_params: list[str] | None = None) -> Delivery:
     """Deliver through the channel's provider, or report that it is not configured.
 
     Raises ValueError when the customer has no usable address for the channel, DeliveryError when the provider fails.
@@ -100,4 +115,4 @@ def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: s
     phone = normalize_phone(to_phone)
     if phone is None:
         raise ValueError("This customer has no phone number on file in international format, e.g. +14155550123")
-    return _whatsapp(phone, text) if channel == "whatsapp" else _sms(phone, text)
+    return _whatsapp(phone, text, template_params or []) if channel == "whatsapp" else _sms(phone, text)

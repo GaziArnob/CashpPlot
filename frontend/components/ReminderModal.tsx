@@ -13,6 +13,7 @@ export default function ReminderModal({ draft, onClose }: { draft: ReminderDraft
   const [text, setText] = useState(draft.reminder.message);
   const [channel, setChannel] = useState("sms");
   const [sent, setSent] = useState<"delivered" | "manual" | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const channels = useApi<Record<string, boolean>>("/messaging/channels").data;
   const live = channels?.[channel] ?? false;
   const [busy, setBusy] = useState(false);
@@ -21,10 +22,11 @@ export default function ReminderModal({ draft, onClose }: { draft: ReminderDraft
   async function send() {
     setBusy(true);
     try {
-      const r = await api<{ delivery: "delivered" | "manual" }>(`/reminders/${draft.reminder.id}/send`, {
+      const r = await api<{ delivery: "delivered" | "manual"; delivery_note: string | null }>(`/reminders/${draft.reminder.id}/send`, {
         method: "POST", body: JSON.stringify({ message: text, channel }),
       });
       setSent(r.delivery);
+      setNote(r.delivery_note);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Send failed");
     } finally {
@@ -48,7 +50,10 @@ export default function ReminderModal({ draft, onClose }: { draft: ReminderDraft
           <div className="flex flex-col items-center py-6 text-center">
             <CheckCircle2 className="size-10 text-emerald-600" />
             {sent === "delivered" ? (
-              <p className="mt-3 font-medium">Reminder sent by {channel.toUpperCase()}</p>
+              <>
+                <p className="mt-3 font-medium">Reminder sent by {channel.toUpperCase()}</p>
+                {note && <p className="mt-1 max-w-sm text-xs text-slate-500">{note}</p>}
+              </>
             ) : (
               <>
                 <p className="mt-3 font-medium">Recorded as sent. CashPilot did not deliver it.</p>

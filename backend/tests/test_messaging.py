@@ -105,3 +105,22 @@ def test_phone_normalisation():
     assert messaging.normalize_phone("+1 (415) 555-0123") == "+14155550123"
     assert messaging.normalize_phone("0415 555 0123") is None
     assert messaging.normalize_phone(None) is None
+
+
+def test_whatsapp_uses_the_approved_template_when_one_is_set(client, demo_headers, live, monkeypatch):
+    monkeypatch.setattr(get_settings(), "whatsapp_template_name", "payment_reminder")
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp"})
+    assert r.status_code == 200 and r.json()["delivery"] == "delivered"
+    url, kw = live[-1]
+    body = kw["json"]
+    assert "graph.facebook.com" in url and body["type"] == "template" and body["to"] == "14155550123"
+    assert body["template"]["name"] == "payment_reminder" and body["template"]["language"]["code"] == "en_US"
+    params = [p["text"] for p in body["template"]["components"][0]["parameters"]]
+    assert len(params) == 4 and "$" in params[2] and params[3].count("-") == 2     # customer, business, amount, due date
+    assert all("\n" not in p for p in params)
+
+
+def test_whatsapp_template_variables_have_no_line_breaks():
+    assert messaging._clean("Hello\n\n  there\t  you") == "Hello there you"

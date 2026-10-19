@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     brevo_sender_name: str = "CashPilot"
     whatsapp_token: str = ""  # Meta WhatsApp Cloud API access token
     whatsapp_phone_number_id: str = ""
+    whatsapp_template_name: str = ""  # an approved template; lets a reminder reach customers who have not messaged you
+    whatsapp_template_lang: str = "en_US"
     twilio_account_sid: str = ""  # SMS, https://www.twilio.com
     twilio_auth_token: str = ""
     twilio_from: str = ""
