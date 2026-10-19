@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardTitle, ErrorBox, Loading, PageHeader, Stat } f
 import { api } from "@/lib/api";
 import { money } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
+import MyLoans from "@/components/MyLoans";
 import { IntroduceModal, ReferralsCard } from "@/components/Referrals";
 import type { LoanCatalogItem, LoanOption, LoanReadiness, WhatIf } from "@/lib/types";
 
@@ -89,6 +90,7 @@ export default function LoanPage() {
         </Card>
       </div>
 
+      <MyLoans onChanged={() => { readiness.reload(); recs.reload(); }} />
       <ReferralsCard refreshKey={refKey} />
       {intro && <IntroduceModal option={intro} onClose={() => setIntro(null)} onDone={() => { setIntro(null); setRefKey((k) => k + 1); }} />}
       <WhatIfSimulator />

@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 
 class ORM(BaseModel):
@@ -176,6 +176,13 @@ class LoanIn(BaseModel):
     rate: float = Field(ge=0, le=100)
     tenure_months: int = Field(ge=1, le=360)
     start_date: date
+    installments_paid: int = Field(default=0, ge=0, le=360)  # already paid before today, so they are not counted as late
+
+    @model_validator(mode="after")
+    def _paid_within_tenure(self):
+        if self.installments_paid > self.tenure_months:
+            raise ValueError("Installments paid can't be more than the number of months")
+        return self
 
 
 class WhatIfIn(BaseModel):

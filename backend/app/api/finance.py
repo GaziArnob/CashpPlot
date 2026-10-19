@@ -3,7 +3,7 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app import services
@@ -127,33 +127,68 @@ def what_if(body: WhatIfIn, business: Business = Depends(get_business), db: Sess
     return services.what_if(db, business, **body.model_dump())
 
 
+def _loan_row(loan: Loan, reps: list[Repayment], today) -> dict:
+    unpaid = [r for r in reps if not r.paid_date]
+    return {
+        "id": loan.id, "lender": loan.lender, "principal": loan.principal, "rate": loan.rate,
+        "tenure_months": loan.tenure_months, "start_date": loan.start_date, "emi": round(loan.emi),
+        "status": loan.status, "paid_installments": len(reps) - len(unpaid),
+        "remaining_to_pay": round(sum(r.amount for r in unpaid)),
+        "overdue_installments": sum(1 for r in unpaid if r.due_date < today),
+        "next_due": next(({"id": r.id, "due_date": r.due_date, "amount": round(r.amount)} for r in unpaid), None),
+    }
+
+
 @router.get("/loans", dependencies=CREDIT)
 def list_loans(business: Business = Depends(get_business), db: Session = Depends(get_db)):
+    today = services.today()
     out = []
     for loan in db.scalars(select(Loan).where(Loan.business_id == business.id).order_by(Loan.start_date.desc())):
         reps = db.scalars(select(Repayment).where(Repayment.loan_id == loan.id).order_by(Repayment.due_date)).all()
-        out.append({
-            "id": loan.id, "lender": loan.lender, "principal": loan.principal, "rate": loan.rate,
-            "tenure_months": loan.tenure_months, "start_date": loan.start_date, "emi": round(loan.emi),
-            "status": loan.status, "paid_installments": sum(1 for r in reps if r.paid_date),
-            "next_due": next(({"id": r.id, "due_date": r.due_date, "amount": round(r.amount)}
-                              for r in reps if not r.paid_date), None),
-        })
+        out.append(_loan_row(loan, reps, today))
     return out
+
+
+@router.get("/loans/{loan_id}", dependencies=CREDIT)
+def loan_schedule(loan_id: int, business: Business = Depends(get_business), db: Session = Depends(get_db)):
+    """One loan with every installment: due date, amount, and whether it is paid or late."""
+    loan = owned(db, Loan, loan_id, business)
+    today = services.today()
+    reps = db.scalars(select(Repayment).where(Repayment.loan_id == loan.id).order_by(Repayment.due_date)).all()
+    return {**_loan_row(loan, reps, today),
+            "schedule": [{"id": r.id, "number": i + 1, "due_date": r.due_date, "amount": round(r.amount),
+                          "paid_date": r.paid_date, "overdue": r.paid_date is None and r.due_date < today}
+                         for i, r in enumerate(reps)]}
 
 
 @router.post("/loans", status_code=201, dependencies=CREDIT)
 def add_loan(body: LoanIn, business: Business = Depends(get_business), db: Session = Depends(get_db)):
-    """Record an existing loan so its installments count in the forecast and credit score."""
+    """Record an existing loan so its installments count in the forecast and credit score.
+
+    `installments_paid` of them are marked paid on their due dates without adding expenses: those payments
+    happened before and are already in the owner's records, so they must not be counted twice.
+    """
     monthly = emi(body.principal, body.rate, body.tenure_months)
-    loan = Loan(business_id=business.id, emi=monthly, **body.model_dump())
+    loan = Loan(business_id=business.id, emi=monthly, **body.model_dump(exclude={"installments_paid"}))
     db.add(loan)
     db.flush()
     for k in range(1, body.tenure_months + 1):
-        db.add(Repayment(business_id=business.id, loan_id=loan.id,
-                         due_date=_add_months(body.start_date, k), amount=monthly))
+        due = _add_months(body.start_date, k)
+        db.add(Repayment(business_id=business.id, loan_id=loan.id, due_date=due, amount=monthly,
+                         paid_date=due if k <= body.installments_paid else None))
+    if body.installments_paid >= body.tenure_months:
+        loan.status = "closed"
     db.commit()
     return {"id": loan.id, "emi": round(monthly), "disclaimer": DISCLAIMER}
+
+
+@router.delete("/loans/{loan_id}", status_code=204, dependencies=CREDIT)
+def delete_loan(loan_id: int, business: Business = Depends(get_business), db: Session = Depends(get_db)):
+    """Remove a loan that was entered by mistake. Expenses already recorded for its paid installments stay."""
+    loan = owned(db, Loan, loan_id, business)
+    db.execute(delete(Repayment).where(Repayment.loan_id == loan.id))
+    db.delete(loan)
+    db.commit()
 
 
 @router.patch("/repayments/{repayment_id}/paid", dependencies=CREDIT)

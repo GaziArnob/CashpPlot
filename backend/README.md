@@ -76,7 +76,7 @@ otherwise Gemini's free vision; the result is a suggestion the owner confirms.
 | Ledger | `GET/POST /invoices`, `PATCH /invoices/{id}/paid`, `GET /recovery/priority`, `POST /recovery/reminder/{invoice_id}`, `GET /reminders`, `POST /reminders/{id}/send`, `GET/POST /suppliers`, `GET/POST /bills`, `PATCH /bills/{id}/paid` |
 | Customers | `GET/POST /customers`, `GET /customers/{id}` |
 | Credit | `GET /credit-score`, `/credit-score/history` |
-| Loans | `GET /loan/readiness`, `/loan/recommendations`, `POST /loan/what-if`, `GET/POST /loans`, `PATCH /repayments/{id}/paid` |
+| Loans | `GET /loan/readiness`, `/loan/recommendations` (all 8 loan types, eligible or not with the reason), `POST /loan/what-if`, `GET/POST /loans`, `GET/DELETE /loans/{id}`, `PATCH /repayments/{id}/paid` |
 | Reports | `GET /reports/pnl?month=YYYY-MM`, `/reports/insights`, `/reports/export` (PDF), `GET/POST/PUT/DELETE /goals`, `GET /notifications`, `PATCH /notifications/{id}/read` |
 | Agent | `POST /agent/chat`, `POST /agent/chat/stream` (SSE), `GET /agent/history`, `/agent/suggestions` |
 | Team | `GET/POST /team`, `DELETE /team/{id}`, `POST /team/{id}/reactivate`, `POST /team/{id}/password` (owner only; staff can record transactions, customers and invoices only) |
