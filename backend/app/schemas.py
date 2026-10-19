@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 
 class ORM(BaseModel):
@@ -83,6 +83,18 @@ class CustomerIn(BaseModel):
     name: str = Field(min_length=1, max_length=160)
     phone: str | None = Field(default=None, max_length=30)
     email: EmailStr | None = None
+
+
+class CustomerUpdate(BaseModel):
+    """Only the fields that are sent change. Send phone or email as null or empty to clear it."""
+    name: str | None = Field(default=None, min_length=1, max_length=160)
+    phone: str | None = Field(default=None, max_length=30)
+    email: EmailStr | None = None
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def _empty_email_clears(cls, v):
+        return None if isinstance(v, str) and not v.strip() else v
 
 
 class CustomerOut(ORM):

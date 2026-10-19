@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -7,7 +7,7 @@ from app.db import get_db
 from app.deps import get_business, owned
 from app.engines.recovery import late_share, risk_level
 from app.models import Business, Customer, Invoice
-from app.schemas import CustomerIn, CustomerOut, InvoiceOut
+from app.schemas import CustomerIn, CustomerOut, CustomerUpdate, InvoiceOut
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
@@ -41,6 +41,25 @@ def list_customers(business: Business = Depends(get_business), db: Session = Dep
 def create_customer(body: CustomerIn, business: Business = Depends(get_business), db: Session = Depends(get_db)):
     c = Customer(business_id=business.id, **body.model_dump())
     db.add(c)
+    db.commit()
+    return c
+
+
+@router.put("/{customer_id}", response_model=CustomerOut)
+def update_customer(customer_id: int, body: CustomerUpdate, business: Business = Depends(get_business),
+                    db: Session = Depends(get_db)):
+    """Change a customer's name, phone or email. A field left out stays as it is; null or an empty string clears
+    the phone or email (the name cannot be cleared)."""
+    c = owned(db, Customer, customer_id, business)
+    sent = body.model_fields_set
+    if "name" in sent:
+        if body.name is None or not body.name.strip():
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "A customer needs a name")
+        c.name = body.name.strip()
+    if "phone" in sent:
+        c.phone = (body.phone or "").strip() or None
+    if "email" in sent:
+        c.email = body.email or None
     db.commit()
     return c
 

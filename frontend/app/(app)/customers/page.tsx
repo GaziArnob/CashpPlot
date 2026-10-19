@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import Modal, { INPUT } from "@/components/Modal";
 import { Badge, Button, Card, ErrorBox, Loading, PageHeader, Stat } from "@/components/ui";
 import ConfirmAction from "@/components/payables/ConfirmAction";
@@ -20,17 +20,22 @@ const RISK = { low: "green", medium: "amber", high: "red" } as const;
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const inDays = (n: number) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 
-function AddCustomer({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+type Editable = { id: number; name: string; phone: string | null; email: string | null };
+
+/** Adds a customer, or edits one when `customer` is given. */
+function CustomerForm({ customer, onClose, onSaved }: { customer?: Editable; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(customer?.name ?? "");
+  const [phone, setPhone] = useState(customer?.phone ?? "");
+  const [email, setEmail] = useState(customer?.email ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function save() {
     setBusy(true);
     setError(null);
     try {
-      await api("/customers", { method: "POST", body: JSON.stringify({ name, phone: phone || null, email: email || null }) });
+      const body = JSON.stringify({ name: name.trim(), phone: phone.trim() || null, email: email.trim() || null });
+      if (customer) await api(`/customers/${customer.id}`, { method: "PUT", body });
+      else await api("/customers", { method: "POST", body });
       onSaved();
       onClose();
     } catch (e) {
@@ -40,10 +45,13 @@ function AddCustomer({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
     }
   }
   return (
-    <Modal title="Add a customer" onClose={onClose}>
+    <Modal title={customer ? "Edit customer" : "Add a customer"} onClose={onClose}>
       <div className="space-y-3">
-        <label className="block text-sm font-medium text-slate-700">Name<input value={name} maxLength={160} onChange={(e) => setName(e.target.value)} className={INPUT} /></label>
-        <label className="block text-sm font-medium text-slate-700">Phone (optional)<input value={phone} maxLength={30} onChange={(e) => setPhone(e.target.value)} className={INPUT} /></label>
+        <label className="block text-sm font-medium text-slate-700">Name<input value={name} maxLength={160} autoFocus onChange={(e) => setName(e.target.value)} className={INPUT} /></label>
+        <label className="block text-sm font-medium text-slate-700">Phone (optional)
+          <input value={phone} maxLength={30} placeholder="+8801XXXXXXXXX" onChange={(e) => setPhone(e.target.value)} className={INPUT} />
+          <span className="mt-0.5 block text-xs font-normal text-slate-500">Start with + and the country code (for example +8801XXXXXXXXX or +14155550123). WhatsApp reminders need this.</span>
+        </label>
         <label className="block text-sm font-medium text-slate-700">Email (optional)<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} /></label>
         {error && <ErrorBox message={error} />}
         <div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>Cancel</Button><Button disabled={busy || !name.trim()} onClick={save}>{busy ? "Saving…" : "Save"}</Button></div>
@@ -96,6 +104,7 @@ function ProfileModal({ id, cur, onClose, onChanged }: { id: number; cur: string
   const [version, setVersion] = useState(0);
   const p = useApi<Profile>(`/customers/${id}?_=${version}`);
   const [form, setForm] = useState<{ amount: string; issue: string; due: string; note: string } | null>(null);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const changed = () => { setVersion((v) => v + 1); onChanged(); };
 
@@ -124,6 +133,7 @@ function ProfileModal({ id, cur, onClose, onChanged }: { id: number; cur: string
             <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">Total paid</p><p className="font-semibold tabular">{money(p.data.total_paid, cur)}</p></div>
           </div>
           <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+            <Button variant="secondary" onClick={() => setEditing(true)}><Pencil className="size-4" /> Edit details</Button>
             <Badge color={RISK[p.data.risk_level]}>{p.data.risk_level} risk</Badge>
             <span className="text-slate-600">Credit limit: {p.data.credit_limit === null ? "not set" : p.data.credit_limit === 0 ? "stop credit" : money(p.data.credit_limit, cur)}</span>
             <Button variant="ghost" onClick={applyLimit}>Apply suggested limit</Button>
@@ -148,6 +158,7 @@ function ProfileModal({ id, cur, onClose, onChanged }: { id: number; cur: string
           )}
         </>
       )}
+      {editing && p.data && <CustomerForm customer={p.data} onClose={() => setEditing(false)} onSaved={changed} />}
     </Modal>
   );
 }
@@ -158,6 +169,7 @@ export default function CustomersPage() {
   const [version, setVersion] = useState(0);
   const list = useApi<Customer[]>(`/customers?_=${version}`);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Editable | null>(null);
   const [open, setOpen] = useState<number | null>(null);
   const refresh = () => setVersion((v) => v + 1);
 
@@ -182,7 +194,8 @@ export default function CustomersPage() {
               <th className="px-3 py-3 text-right font-medium">Overdue</th>
               <th className="px-3 py-3 font-medium">Risk</th>
               <th className="px-3 py-3 text-right font-medium">Credit limit</th>
-              <th className="px-5 py-3 text-right font-medium">Invoices</th>
+              <th className="px-3 py-3 text-right font-medium">Invoices</th>
+              <th className="px-5 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -193,15 +206,21 @@ export default function CustomersPage() {
                 <td className="px-3 py-3 text-right tabular">{c.overdue ? <span className="text-rose-600">{money(c.overdue, cur)}</span> : "—"}</td>
                 <td className="px-3 py-3"><Badge color={RISK[c.risk_level]}>{c.risk_level}</Badge></td>
                 <td className="px-3 py-3 text-right tabular text-slate-600">{c.credit_limit === null ? "—" : c.credit_limit === 0 ? "stop" : money(c.credit_limit, cur)}</td>
-                <td className="px-5 py-3 text-right tabular text-slate-600">{c.invoice_count}</td>
+                <td className="px-3 py-3 text-right tabular text-slate-600">{c.invoice_count}</td>
+                <td className="px-5 py-3 text-right">
+                  <button aria-label={`Edit ${c.name}`} title="Edit"
+                    onClick={(e) => { e.stopPropagation(); setEditing(c); }}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Pencil className="size-4" /></button>
+                </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-slate-500">No customers yet. Add your first one.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={7} className="px-5 py-10 text-center text-slate-500">No customers yet. Add your first one.</td></tr>}
           </tbody>
         </table>
       </Card>
-      <p className="mt-3 text-xs text-slate-500">Click a customer to see their invoices, record payments and add new invoices. As of {longDate(new Date().toISOString().slice(0, 10))}.</p>
-      {adding && <AddCustomer onClose={() => setAdding(false)} onSaved={refresh} />}
+      <p className="mt-3 text-xs text-slate-500">Click a customer to see their invoices, record payments and add new invoices; the pencil edits their name, phone and email. As of {longDate(new Date().toISOString().slice(0, 10))}.</p>
+      {adding && <CustomerForm onClose={() => setAdding(false)} onSaved={refresh} />}
+      {editing && <CustomerForm customer={editing} onClose={() => setEditing(null)} onSaved={refresh} />}
       {open !== null && <ProfileModal id={open} cur={cur} onClose={() => setOpen(null)} onChanged={refresh} />}
     </>
   );

@@ -68,6 +68,8 @@ date,amount,type,category,description
 | C4 | Draft a reminder | A message with the customer's name, amount and tone appears; it is a draft |
 | C5 | Edit the text, choose Email, press Send | Says **"Recorded as sent. CashPilot did not deliver it"** and offers Copy (email is not connected). After you add Brevo keys it says "Reminder sent by EMAIL" |
 | C6 | Mark the invoice paid | Leaves the overdue list |
+| C7 | Customers → pencil icon on a row (or open a customer → Edit details), change the phone to `+8801XXXXXXXXX` and the email, Save | The change shows when you reopen the customer; sending a WhatsApp or email reminder now uses it |
+| C8 | Edit a customer and empty the phone, Save | The phone is cleared; the name cannot be left empty |
 
 ## D. Forecast and advisor
 
