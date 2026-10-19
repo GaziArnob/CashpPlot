@@ -116,6 +116,7 @@ def test_read_read_all_and_dismiss(client):
     trigger(client, h)
     s = client.get("/notifications/summary", headers=h).json()
     assert s["unread"] >= 3 and len(s["latest"]) <= 6 and s["latest"][0]["created_at"]
+    assert s["total"] == len(alerts(client, h, limit=200)) >= s["unread"]
     first = alerts(client, h)[0]
     assert client.patch(f"/notifications/{first['id']}/read", headers=h).json()["is_read"] is True
     assert client.get("/notifications/summary", headers=h).json()["unread"] == s["unread"] - 1

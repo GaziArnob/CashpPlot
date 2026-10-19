@@ -30,7 +30,7 @@ export default function NotificationBell() {
   const router = useRouter();
   // The page in the query makes it refetch on every navigation, so alerts raised by a page load show at once.
   const page = usePathname();
-  const { data, reload } = useApi<{ unread: number; latest: Alert[] }>(`/notifications/summary?page=${encodeURIComponent(page)}`);
+  const { data, reload } = useApi<{ unread: number; total: number; latest: Alert[] }>(`/notifications/summary?page=${encodeURIComponent(page)}`);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -53,6 +53,7 @@ export default function NotificationBell() {
   }
 
   const unread = data?.unread ?? 0;
+  const total = data?.total ?? 0;
   return (
     <div className="relative">
       <button onClick={() => setOpen((v) => !v)} aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
@@ -68,9 +69,21 @@ export default function NotificationBell() {
         <>
           <button aria-label="Close notifications" className="fixed inset-0 z-30 cursor-default" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[85vw] rounded-xl border border-slate-200 bg-white shadow-lg">
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <p className="text-sm font-semibold">Notifications</p>
-              {unread > 0 && <button onClick={readAll} className="text-xs font-medium text-emerald-700 hover:underline">Mark all read</button>}
+            <div className="border-b border-slate-100 px-4 py-3">
+              <div className="flex items-baseline justify-between">
+                <p className="text-sm font-semibold">Notifications</p>
+                <p className="text-xs text-slate-500">{unread} unread · {total} in all</p>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Link href="/notifications" onClick={() => setOpen(false)}
+                  className="rounded-lg bg-emerald-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-emerald-700">
+                  View all
+                </Link>
+                <button onClick={readAll} disabled={unread === 0}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent">
+                  Mark all read
+                </button>
+              </div>
             </div>
             <ul className="max-h-96 divide-y divide-slate-100 overflow-y-auto">
               {(data?.latest ?? []).length === 0 && <li className="px-4 py-6 text-center text-sm text-slate-500">Nothing needs your attention.</li>}
@@ -86,9 +99,11 @@ export default function NotificationBell() {
                 </li>
               ))}
             </ul>
-            <Link href="/notifications" onClick={() => setOpen(false)} className="block border-t border-slate-100 px-4 py-2.5 text-center text-sm font-medium text-emerald-700 hover:bg-slate-50">
-              See all notifications
-            </Link>
+            {total > (data?.latest.length ?? 0) && (
+              <p className="border-t border-slate-100 px-4 py-2 text-center text-xs text-slate-500">
+                Showing the latest {data?.latest.length} of {total}. Use “View all” to see every notification.
+              </p>
+            )}
           </div>
         </>
       )}

@@ -36,12 +36,13 @@ def list_notifications(unread_only: bool = False, limit: int = Query(50, ge=1, l
 
 @router.get("/summary")
 def summary(business: Business = Depends(get_business), db: Session = Depends(get_db)):
-    """Light enough to poll: the unread count and the latest few."""
+    """Light enough to poll: the unread count, the total, and the latest few."""
     unread = db.scalar(select(func.count()).select_from(Notification).where(
         Notification.business_id == business.id, Notification.is_read.is_(False)))
+    total = db.scalar(select(func.count()).select_from(Notification).where(Notification.business_id == business.id))
     latest = db.scalars(select(Notification).where(Notification.business_id == business.id)
                         .order_by(Notification.created_at.desc(), Notification.id.desc()).limit(6))
-    return {"unread": unread, "latest": [_out(n) for n in latest]}
+    return {"unread": unread, "total": total, "latest": [_out(n) for n in latest]}
 
 
 @router.post("/read-all")

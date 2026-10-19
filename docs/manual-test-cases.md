@@ -188,3 +188,12 @@ date,amount,type,category,description
 | M3 | Add a loan or bill and pay it on time | The "Pay your next 3 bills on time" step shrinks or goes away as your repayment record builds |
 | M4 | A business already in the Excellent band | "You are in the top band" and no next band |
 | M5 | A brand-new account | The card lists what data to add; no invented gains |
+
+## N. Notification bell buttons
+
+| # | Do this | Expect |
+|---|---|---|
+| N1 | Click the bell (top right) | The dropdown has two buttons at the top: **View all** and **Mark all read**, and a count like "3 unread · 14 in all" |
+| N2 | Click **View all** | The Notifications page lists every notification, not just the latest 6 |
+| N3 | Click **Mark all read** | The unread badge disappears; the button is greyed out when nothing is unread |
+| N4 | With more than 6 notifications | The dropdown says "Showing the latest 6 of N" |
