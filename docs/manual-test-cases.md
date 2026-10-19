@@ -36,8 +36,8 @@ date,amount,type,category,description
 | A1 | Open `/signup`, enter a name, new email, password under 8 characters | "Use at least 8 characters" and nothing is created |
 | A2 | Same, but the two passwords differ | "The two passwords don't match" |
 | A3 | Valid details | Lands on the 3-step onboarding |
-| A4 | Onboarding step 1: leave the business name empty, press Next | Cannot continue |
-| A5 | Fill all 3 steps (name, currency, opening balance, safety level), skip records | Dashboard shows your balance |
+| A4 | Onboarding step 1: leave the business name empty | Next is disabled |
+| A5 | Step 1: name, pick a business type card, currency chip and how long it has run. Step 2: cash today and a safety level (try the preset chips). Step 3: skip, or drop a CSV on the box | Dashboard shows your balance; the progress bar fills as you go |
 | A6 | Sign out, sign in with a wrong password | "Wrong email or password", no raw JSON |
 | A7 | Sign in correctly | Dashboard |
 | A8 | Reload any page while signed in | Stays signed in |
