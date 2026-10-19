@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-xl border border-slate-200 bg-white p-5 ${className}`}>{children}</div>;
+  return <div className={`ff-rise rounded-xl border border-slate-200 bg-white p-5 ${className}`}>{children}</div>;
 }
 
 export function CardTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
@@ -21,7 +21,7 @@ export function PageHeader({ title, subtitle, right }: { title: string; subtitle
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="ff-gradient-text text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
       </div>
       {right}
@@ -34,7 +34,8 @@ export function Stat({ label, value, hint, tone = "default" }: {
 }) {
   const color = { default: "text-slate-900", good: "text-emerald-600", bad: "text-rose-600", warn: "text-amber-600" }[tone];
   return (
-    <Card>
+    <Card className="relative overflow-hidden">
+      <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/60 to-transparent" />
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       <p className={`mt-2 text-2xl font-semibold tabular ${color}`}>{value}</p>
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
@@ -63,13 +64,13 @@ export function Button({ children, onClick, variant = "primary", disabled, type 
   disabled?: boolean; type?: "button" | "submit"; className?: string;
 }) {
   const styles = {
-    primary: "bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-300",
+    primary: "bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-[0_6px_18px_-6px_rgb(91_91_214/0.7)] hover:from-emerald-700 hover:to-emerald-700 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none",
     secondary: "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:text-slate-400",
     ghost: "text-slate-600 hover:bg-slate-100",
   }[variant];
   return (
     <button type={type} onClick={onClick} disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${styles} ${className}`}>
+      className={`inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${styles} ${className}`}>
       {children}
     </button>
   );
@@ -77,8 +78,12 @@ export function Button({ children, onClick, variant = "primary", disabled, type 
 
 export function Loading({ label = "Loading" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-2 py-16 text-sm text-slate-500 justify-center">
-      <Loader2 className="size-4 animate-spin" /> {label}…
+    <div className="space-y-4 py-8" role="status" aria-label={`${label}…`}>
+      <div className="flex items-center justify-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" /> {label}…</div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => <div key={i} className="ff-skeleton h-20 rounded-xl" />)}
+      </div>
+      <div className="ff-skeleton h-40 rounded-xl" />
     </div>
   );
 }

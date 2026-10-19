@@ -71,7 +71,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const link = ({ href, label, icon: Icon }: Item) => (
     <Link key={href} href={href}
       className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        pathname.startsWith(href) ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-100"}`}>
+        pathname.startsWith(href) ? "bg-emerald-50 text-emerald-800 shadow-[inset_2px_0_0_rgb(91_91_214)]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}>
       <Icon className="size-4" /> {label}
       {href === "/notifications" && !staff && <UnreadBadge />}
     </Link>
@@ -79,9 +79,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-slate-200 bg-[rgb(var(--ff-surface)/0.8)] backdrop-blur md:flex">
         <Link href="/" className="flex items-center gap-2 px-5 py-5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-600 text-white"><Wallet className="size-4" /></div>
+          <div className="ff-glow flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-300 text-white"><Wallet className="size-4" /></div>
           <span className="text-lg font-semibold tracking-tight">CashPilot</span>
         </Link>
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-3">
@@ -102,7 +102,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white md:hidden">
+        <header className="sticky top-0 z-10 border-b border-slate-200 bg-[rgb(var(--ff-surface)/0.8)] backdrop-blur md:hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <span className="font-semibold">CashPilot</span>
             <button onClick={signOut} className="text-slate-500" aria-label="Sign out"><LogOut className="size-4" /></button>

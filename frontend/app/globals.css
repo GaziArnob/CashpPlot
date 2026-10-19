@@ -87,7 +87,6 @@ html { background-color: rgb(var(--ff-canvas)); }
 
 body {
   font-family: var(--font-inter), "Inter", system-ui, sans-serif;
-  background-color: rgb(var(--ff-canvas));
   color: rgb(var(--ff-fg));
 }
 
@@ -113,4 +112,68 @@ input:focus, select:focus, textarea:focus {
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- polish layer ---------- */
+
+/* ambient violet glow + faint dot grid behind every page */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 480px at 85% -10%, rgb(var(--ff-brand) / 0.18), transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, rgb(139 114 224 / 0.12), transparent 60%),
+    radial-gradient(rgb(var(--ff-edge-strong) / 0.35) 1px, transparent 1px) 0 0 / 28px 28px;
+}
+
+/* the root landing wrapper uses bg-white: let the ambient layer show through */
+.min-h-screen.bg-white { background-color: transparent; }
+.bg-slate-50.py-16, .bg-slate-50.py-14 { background-color: rgb(var(--ff-sunken) / 0.55); }
+
+/* motion */
+@keyframes ff-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ff-shimmer { to { background-position: -200% 0; } }
+@keyframes ff-float { 50% { transform: translateY(-6px); } }
+.ff-rise { animation: ff-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.ff-float { animation: ff-float 6s ease-in-out infinite; }
+.ff-gradient-text {
+  background: linear-gradient(120deg, rgb(var(--ff-fg)) 20%, rgb(var(--ff-brand-text)) 60%, rgb(139 114 224));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ff-glow { box-shadow: 0 0 0 1px rgb(var(--ff-brand) / 0.5), 0 8px 28px -8px rgb(var(--ff-brand) / 0.65); }
+.ff-skeleton {
+  background: linear-gradient(90deg, rgb(var(--ff-raised)) 25%, rgb(var(--ff-edge)) 37%, rgb(var(--ff-raised)) 63%);
+  background-size: 200% 100%;
+  animation: ff-shimmer 1.4s linear infinite;
+}
+
+/* cards lift slightly on hover */
+.bg-white.rounded-xl, .bg-white.rounded-2xl {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.bg-white.rounded-xl:hover, .bg-white.rounded-2xl:hover {
+  border-color: rgb(var(--ff-brand) / 0.45);
+}
+
+/* tables */
+table { border-collapse: collapse; }
+tbody tr { transition: background-color 0.15s ease; }
+tbody tr:hover { background-color: rgb(var(--ff-brand) / 0.06); }
+
+/* keyboard focus */
+:focus-visible { outline: 2px solid rgb(var(--ff-brand-text) / 0.8); outline-offset: 2px; border-radius: 6px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+
+/* slim scrollbars */
+* { scrollbar-width: thin; scrollbar-color: rgb(var(--ff-edge-strong)) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--ff-edge-strong)); border-radius: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ff-rise, .ff-float, .ff-skeleton { animation: none; }
 }
