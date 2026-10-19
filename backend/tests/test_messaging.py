@@ -24,8 +24,7 @@ def live(monkeypatch):
     """Pretend every channel has credentials, and record the outgoing calls."""
     s = get_settings()
     for k, v in dict(brevo_api_key="k", brevo_sender_email="me@example.com", whatsapp_token="t",
-                     whatsapp_phone_number_id="123", twilio_account_sid="AC1", twilio_auth_token="a",
-                     twilio_from="+15550001111").items():
+                     whatsapp_phone_number_id="123", twilio_account_sid="AC1", twilio_auth_token="a").items():
         monkeypatch.setattr(s, k, v)
     class Calls(list):
         code = {"code": 200}
@@ -63,7 +62,7 @@ def test_not_configured_is_recorded_as_manual_and_sends_nothing(client, demo_hea
     for k in ("brevo_api_key", "whatsapp_token", "twilio_account_sid", "twilio_whatsapp_from", "mailjet_api_key", "smtp_host"):
         monkeypatch.setattr(s, k, "")
     monkeypatch.setattr(httpx, "post", lambda *a, **k: pytest.fail("a message was sent without credentials"))
-    assert client.get("/messaging/channels", headers=demo_headers).json() == {"email": False, "whatsapp": False, "sms": False}
+    assert client.get("/messaging/channels", headers=demo_headers).json() == {"email": False, "whatsapp": False}
     r = client.post(f"/reminders/{_draft(client, demo_headers)['id']}/send", headers=demo_headers, json={"channel": "email"})
     assert r.status_code == 200 and r.json()["status"] == "sent" and r.json()["delivery"] == "manual"
 
@@ -71,7 +70,7 @@ def test_not_configured_is_recorded_as_manual_and_sends_nothing(client, demo_hea
 def test_each_channel_calls_its_provider_with_the_owners_text(client, demo_headers, live):
     reminder = _draft(client, demo_headers)
     _customer_contact(client, demo_headers, reminder)
-    for channel, host in (("email", "api.brevo.com"), ("whatsapp", "graph.facebook.com"), ("sms", "api.twilio.com")):
+    for channel, host in (("email", "api.brevo.com"), ("whatsapp", "graph.facebook.com")):
         r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers,
                         json={"channel": channel, "message": f"Edited by the owner via {channel}"})
         assert r.status_code == 200 and r.json()["delivery"] == "delivered", r.text
@@ -87,7 +86,7 @@ def test_provider_failure_keeps_the_draft(client, demo_headers, live):
     reminder = _draft(client, demo_headers)
     _customer_contact(client, demo_headers, reminder)
     live.code["code"] = 401
-    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "sms"})
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp"})
     assert r.status_code == 502 and "Nothing was sent" in r.json()["detail"]
     assert next(x for x in client.get("/reminders", headers=demo_headers).json() if x["id"] == reminder["id"])["status"] == "draft"
 
@@ -104,8 +103,9 @@ def test_missing_contact_is_a_clear_error_when_the_channel_is_live(client, demo_
     finally:
         db.close()
     assert client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"}).status_code == 422
-    assert client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "sms"}).status_code == 422
+    assert client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp"}).status_code == 422
     assert not live
+    assert client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "sms"}).status_code == 422   # no longer a channel
 
 
 def test_phone_normalisation():
@@ -340,31 +340,34 @@ def test_mailjet_answering_200_with_an_error_status_is_not_reported_as_sent(clie
         FakeResp.body = None
 
 
-def test_the_providers_own_reason_is_shown_when_it_refuses(client, demo_headers, live):
+def test_the_providers_own_reason_is_shown_when_it_refuses(client, demo_headers, twilio_only, monkeypatch):
     reminder = _draft(client, demo_headers)
     _customer_contact(client, demo_headers, reminder)
-    live.code["code"] = 400
-    FakeResp.body = {"code": 21608, "message": "The number +14155550123 is unverified. Trial accounts cannot send messages to unverified numbers."}
+    twilio_only.code["code"] = 400
+    FakeResp.body = {"code": 63016, "message": "The number +14155550123 has not joined the sandbox. Ask them to send the join phrase."}
     try:
-        r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "sms"})
-        detail = r.json()["detail"]
-        assert r.status_code == 502 and "Twilio rejected the message (400)" in detail and "unverified" in detail
+        detail = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp"}).json()["detail"]
+        assert "Twilio rejected the message (400)" in detail and "join" in detail and "Nothing was sent" in detail
+        FakeResp.body = None                                                                        # no body: just the code
+        detail = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp"}).json()["detail"]
+        assert detail.startswith("Twilio rejected the message (400). Nothing")
+        s = get_settings()
+        monkeypatch.setattr(s, "whatsapp_token", "t")                                              # Meta's own WhatsApp
+        monkeypatch.setattr(s, "whatsapp_phone_number_id", "999")
         FakeResp.body = {"error": {"message": "Recipient phone number not in allowed list"}}      # Meta's shape
         detail = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp"}).json()["detail"]
         assert "WhatsApp rejected the message (400)" in detail and "not in allowed list" in detail
-        FakeResp.body = None                                                                        # no body: just the code
-        assert client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "sms"}).json()["detail"].startswith("Twilio rejected the message (400). Nothing")
     finally:
         FakeResp.body = None
 
 
-# SMS and WhatsApp from one Twilio account
+# WhatsApp through Twilio
 
 @pytest.fixture()
 def twilio_only(monkeypatch):
     s = get_settings()
     for k, v in dict(whatsapp_token="", whatsapp_phone_number_id="", twilio_account_sid="AC1", twilio_auth_token="tok",
-                     twilio_from="+15550001111", twilio_whatsapp_from="whatsapp:+14155238886").items():
+                     twilio_whatsapp_from="whatsapp:+14155238886").items():
         monkeypatch.setattr(s, k, v)
 
     class Calls(list):
@@ -375,17 +378,15 @@ def twilio_only(monkeypatch):
     return calls
 
 
-def test_one_twilio_account_serves_both_sms_and_whatsapp(client, demo_headers, twilio_only):
-    assert client.get("/messaging/channels", headers=demo_headers).json() == {"email": False, "whatsapp": True, "sms": True}
+def test_twilio_sends_whatsapp_with_the_whatsapp_prefix(client, demo_headers, twilio_only):
+    assert client.get("/messaging/channels", headers=demo_headers).json() == {"email": False, "whatsapp": True}
     reminder = _draft(client, demo_headers)
     _customer_contact(client, demo_headers, reminder)
-    for channel in ("sms", "whatsapp"):
-        r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": channel, "message": f"hi by {channel}"})
-        assert r.status_code == 200 and r.json()["delivery"] == "delivered", r.text
-    sms, wa = twilio_only[-2][1]["data"], twilio_only[-1][1]["data"]
-    assert sms == {"To": "+14155550123", "From": "+15550001111", "Body": "hi by sms"}
-    assert wa == {"To": "whatsapp:+14155550123", "From": "whatsapp:+14155238886", "Body": "hi by whatsapp"}
-    assert all("api.twilio.com" in u for u, _ in twilio_only[-2:])
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp", "message": "hi by whatsapp"})
+    assert r.status_code == 200 and r.json()["delivery"] == "delivered", r.text
+    url, kw = twilio_only[-1]
+    assert "api.twilio.com" in url
+    assert kw["data"] == {"To": "whatsapp:+14155550123", "From": "whatsapp:+14155238886", "Body": "hi by whatsapp"}
     assert "sandbox" in r.json()["delivery_note"]
 
 
@@ -407,6 +408,6 @@ def test_metas_whatsapp_is_used_first_when_both_are_set(client, demo_headers, tw
     assert "graph.facebook.com" in twilio_only[-1][0]
 
 
-def test_twilio_without_a_whatsapp_sender_gives_sms_only(client, demo_headers, twilio_only, monkeypatch):
+def test_twilio_without_a_whatsapp_sender_gives_no_whatsapp(client, demo_headers, twilio_only, monkeypatch):
     monkeypatch.setattr(get_settings(), "twilio_whatsapp_from", "")
-    assert client.get("/messaging/channels", headers=demo_headers).json() == {"email": False, "whatsapp": False, "sms": True}
+    assert client.get("/messaging/channels", headers=demo_headers).json() == {"email": False, "whatsapp": False}

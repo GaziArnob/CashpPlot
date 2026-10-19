@@ -11,7 +11,7 @@ export type ReminderDraft = { reminder: Reminder; customer: string };
 
 export default function ReminderModal({ draft, onClose }: { draft: ReminderDraft; onClose: () => void }) {
   const [text, setText] = useState(draft.reminder.message);
-  const [channel, setChannel] = useState("sms");
+  const [channel, setChannel] = useState("whatsapp");
   const [sent, setSent] = useState<"delivered" | "manual" | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const channels = useApi<Record<string, boolean>>("/messaging/channels").data;
@@ -76,7 +76,6 @@ export default function ReminderModal({ draft, onClose }: { draft: ReminderDraft
             <div className="mt-4 flex items-center justify-between gap-3">
               <select value={channel} onChange={(e) => setChannel(e.target.value)}
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-                <option value="sms">SMS</option>
                 <option value="whatsapp">WhatsApp</option>
                 <option value="email">Email</option>
               </select>

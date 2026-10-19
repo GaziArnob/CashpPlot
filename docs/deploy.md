@@ -45,37 +45,24 @@ Each one is off until its keys are set in Render, and none of them acts without 
 | Email reminders by SMTP, free with any mailbox (e.g. Gmail). **Does not work on Render's free plan, which blocks SMTP ports 25, 465 and 587**; fine on your own computer or a paid plan | `SMTP_HOST`, `SMTP_PORT` (587, or 465 for SSL), `SMTP_USER`, `SMTP_PASSWORD`, optional `SMTP_FROM` | The reminder dialog's Email channel delivers the message. For Gmail: turn on 2-step verification, then Google Account → Security → App passwords, and use that 16-character password as `SMTP_PASSWORD` (host `smtp.gmail.com`). Gmail allows about 500 messages a day |
 | Email reminders through Brevo instead, https://www.brevo.com (used first when set; it also has a free plan, check its pricing page) | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL` (a sender verified in Brevo) | The reminder dialog's Email channel delivers the message |
 | WhatsApp, https://developers.facebook.com/docs/whatsapp/cloud-api | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and for real customers `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANG` | WhatsApp channel. Without a template, free-form text only reaches people who messaged the business in the last 24 hours, plus test numbers. See "WhatsApp template" below |
-| SMS, https://www.twilio.com | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | SMS channel. Customer phone numbers must be in international format, e.g. `+14155550123` |
+| WhatsApp through Twilio (no Meta setup), https://www.twilio.com | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` (`whatsapp:+14155238886` for the sandbox) | WhatsApp channel. See "WhatsApp through Twilio" below |
 | Pro payments, https://stripe.com | `BILLING_MODE=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Settings → Upgrade to Pro opens Stripe Checkout |
 | Bank import, https://plaid.com | `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox` | Transactions → Connect a bank. Sandbox uses sample banks only |
 
-### WhatsApp through the same Twilio account (no Meta setup)
+### WhatsApp through Twilio (no Meta setup)
 
 Set `TWILIO_WHATSAPP_FROM=whatsapp:+14155238886` (Twilio's sandbox number; see Console → Messaging → Try it out → Send a
-WhatsApp message, where the exact number and your join phrase are shown). With the same `TWILIO_ACCOUNT_SID` and
-`TWILIO_AUTH_TOKEN`, the WhatsApp channel then works alongside SMS. Each recipient must first send the join phrase
+WhatsApp message, where the exact number and your join phrase are shown). With your `TWILIO_ACCOUNT_SID` and
+`TWILIO_AUTH_TOKEN`, the WhatsApp channel works. Each recipient must first send the join phrase
 (`join something-something`) from their WhatsApp to the sandbox number; after that, free text reaches them for 24 hours
 from their last message. If the Meta variables are also set, Meta's WhatsApp is used instead.
 
-### Twilio SMS on a trial account
+### Twilio trial notes
 
-- A trial account can message **only numbers you verified** (Console → Phone Numbers → Verified Caller IDs). Anything
-  else is refused, and the reminder dialog shows Twilio's own reason.
-- To text a country, enable it under Messaging → Settings → **Geo Permissions** (for example Bangladesh).
-- Trial messages start with "Sent from your Twilio trial account". Upgrading removes that and the verified-number limit.
+- A trial account has free credit (about 100 WhatsApp messages). Messages start with a "Sent from your Twilio trial account"
+  style prefix. Upgrading removes the sandbox limits.
 - Customer phone numbers must be in international format, e.g. `+8801XXXXXXXXX` or `+14155550123`.
-
-### WhatsApp template
-
-To reach a customer who has not messaged you, WhatsApp requires an approved template. In Meta's WhatsApp Manager create
-a **Utility** template (for example named `payment_reminder`, language English) with exactly four variables:
-
-> Hi {{1}}, a reminder from {{2}}: {{3}} was due on {{4}}. Please pay when you can, and reply here if you have a question.
-
-Once Meta approves it, set `WHATSAPP_TEMPLATE_NAME=payment_reminder` and `WHATSAPP_TEMPLATE_LANG=en` (match the
-language you chose, e.g. `en_US`). CashPilot then fills {{1}} customer name, {{2}} your business, {{3}} the amount
-and {{4}} the due date. The wording sent is the template's: an edit you make in the reminder box is not used for
-WhatsApp. Meta charges per conversation outside its free allowance, so check its pricing page.
+- If Twilio refuses a message, the reminder dialog shows Twilio's own reason (for example "has not joined the sandbox").
 
 ### Stripe
 

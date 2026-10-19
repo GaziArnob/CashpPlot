@@ -23,7 +23,7 @@ Password hashing (bcrypt), short-lived access tokens with rotating refresh cooki
 Numbers always come from deterministic engines; the language model only explains them, and any figure it adds that the engines did not produce is rejected. Customer and supplier names are replaced by codes before reaching a hosted model. Owners can choose cloud, local-only or no AI. Free-tier providers only.
 
 ## Roadmap (not built — label as such)
-Bank and payment-wallet connections, real lender integrations, real SMS/WhatsApp sending, live payments for the Pro plan, PostgreSQL row-level security, hosted deployment, on-device receipt OCR install.
+Bank and payment-wallet connections, real lender integrations, real WhatsApp sending, live payments for the Pro plan, PostgreSQL row-level security, hosted deployment, on-device receipt OCR install.
 
 ## Still needed from you
 Team details, real traction (users, pilots), and the pricing/margin basis. These cannot be filled in by the tool.

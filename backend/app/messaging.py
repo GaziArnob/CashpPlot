@@ -1,4 +1,4 @@
-"""Delivering a reminder the owner has approved: email (Brevo), WhatsApp (Meta Cloud API) or SMS (Twilio).
+"""Delivering a reminder the owner has approved: email (Brevo, Mailjet or SMTP) or WhatsApp (Meta Cloud API, or Twilio).
 
 Nothing here runs on its own: it is called only from the owner's explicit "send" action. A channel with no
 credentials is "not configured" and nothing leaves the server; the owner then sends the text themselves.
@@ -55,7 +55,6 @@ def configured_channels() -> dict[str, bool]:
     return {
         "email": _brevo_ready() or _mailjet_ready() or _smtp_ready(),
         "whatsapp": bool(s.whatsapp_token and s.whatsapp_phone_number_id) or (_twilio_ready() and bool(s.twilio_whatsapp_from)),
-        "sms": bool(s.twilio_account_sid and s.twilio_auth_token and s.twilio_from),
     }
 
 
@@ -191,17 +190,6 @@ def _twilio_whatsapp(to: str, text: str) -> Delivery:
                                               "works for 24 hours after their last message to the sandbox number.")
 
 
-def _sms(to: str, text: str) -> Delivery:
-    s = get_settings()
-    try:
-        r = httpx.post(f"https://api.twilio.com/2010-04-01/Accounts/{s.twilio_account_sid}/Messages.json", timeout=TIMEOUT,
-                       auth=(s.twilio_account_sid, s.twilio_auth_token), data={"To": to, "From": s.twilio_from, "Body": text})
-    except httpx.HTTPError:
-        raise DeliveryError("Could not reach Twilio")
-    _check(r, "Twilio")
-    return Delivery(True, "twilio")
-
-
 def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: str, text: str,
          template_params: list[str] | None = None) -> Delivery:
     """Deliver through the channel's provider, or report that it is not configured.
@@ -209,7 +197,7 @@ def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: s
     Raises ValueError when the customer has no usable address for the channel, DeliveryError when the provider fails.
     """
     if not configured_channels()[channel]:
-        return Delivery(False, "none", f"{channel.capitalize() if channel != 'sms' else 'SMS'} is not configured")
+        return Delivery(False, "none", f"{channel.capitalize()} is not configured")
     if channel == "email":
         if not (to_email and EMAIL.match(to_email)):
             raise ValueError("This customer has no email address on file")
@@ -224,4 +212,3 @@ def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: s
         if s.whatsapp_token and s.whatsapp_phone_number_id:
             return _whatsapp(phone, text, template_params or [])
         return _twilio_whatsapp(phone, text)
-    return _sms(phone, text)

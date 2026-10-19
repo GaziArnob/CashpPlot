@@ -12,7 +12,7 @@ os.environ["ALERTS_LOG_PATH"] = f"{_tmp}/alerts.log"
 # Tests must never use real accounts from the developer's .env (they could send real email, SMS or payments).
 for _key in ("BREVO_API_KEY", "BREVO_SENDER_EMAIL", "MAILJET_API_KEY", "MAILJET_SECRET_KEY", "MAILJET_SENDER_EMAIL",
              "SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM", "WHATSAPP_TOKEN", "WHATSAPP_PHONE_NUMBER_ID",
-             "WHATSAPP_TEMPLATE_NAME", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM", "TWILIO_WHATSAPP_FROM", "STRIPE_SECRET_KEY",
+             "WHATSAPP_TEMPLATE_NAME", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM", "STRIPE_SECRET_KEY",
              "STRIPE_PRICE_ID", "STRIPE_WEBHOOK_SECRET", "PLAID_CLIENT_ID", "PLAID_SECRET"):
     os.environ[_key] = ""
 os.environ["BILLING_MODE"] = "demo"

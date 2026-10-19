@@ -4,7 +4,7 @@ from datetime import date
 
 CURRENCY_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£", "INR": "₹", "CAD": "CA$", "AUD": "A$", "SGD": "S$"}
 
-# Reminder messages: SMS/WhatsApp length, polite but firm. {amount} is already formatted.
+# Reminder messages: short-message length, polite but firm. {amount} is already formatted.
 REMINDER_TEMPLATES = {
     "upcoming": (
         "Hello {customer}, a quick reminder from {business}: your payment of {amount} is due on "

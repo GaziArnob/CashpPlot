@@ -166,7 +166,7 @@ class ReminderOut(ORM):
 
 class ReminderSendIn(BaseModel):
     message: str | None = Field(default=None, max_length=1000)
-    channel: Literal["sms", "whatsapp", "email"] = "sms"
+    channel: Literal["whatsapp", "email"] = "whatsapp"
 
 
 # Loans

@@ -52,7 +52,7 @@ def test_recovery_reminder_and_send(client, demo_headers):
     assert r.status_code == 201, r.text
     rem = r.json()
     assert rem["tone"] == "firm" and "Harbor Market" in rem["message"] and rem["status"] == "draft"
-    sent = client.post(f"/reminders/{rem['id']}/send", headers=demo_headers, json={"channel": "sms"}).json()
+    sent = client.post(f"/reminders/{rem['id']}/send", headers=demo_headers, json={"channel": "whatsapp"}).json()
     assert sent["status"] == "sent"
 
 

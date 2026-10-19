@@ -140,7 +140,7 @@ class Reminder(Base):
     invoice_id: Mapped[int] = mapped_column(ForeignKey("invoices.id", ondelete="CASCADE"), index=True)
     message: Mapped[str] = mapped_column(Text)
     tone: Mapped[str] = mapped_column(String(20))
-    channel: Mapped[str] = mapped_column(String(20), default="sms")
+    channel: Mapped[str] = mapped_column(String(20), default="whatsapp")
     status: Mapped[str] = mapped_column(String(10), default="draft")  # draft | sent
     generated_by: Mapped[str] = mapped_column(String(20), default="template")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

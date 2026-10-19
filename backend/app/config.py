@@ -49,10 +49,9 @@ class Settings(BaseSettings):
     whatsapp_phone_number_id: str = ""
     whatsapp_template_name: str = ""  # an approved template; lets a reminder reach customers who have not messaged you
     whatsapp_template_lang: str = "en_US"
-    twilio_account_sid: str = ""  # SMS, https://www.twilio.com
+    twilio_account_sid: str = ""  # WhatsApp through Twilio, https://www.twilio.com
     twilio_auth_token: str = ""
-    twilio_from: str = ""
-    # WhatsApp through the same Twilio account: the sandbox number "whatsapp:+14155238886", or your approved sender.
+    # The WhatsApp sender: the sandbox number "whatsapp:+14155238886", or your approved sender.
     twilio_whatsapp_from: str = ""
 
     # Stripe (use test keys until the business is verified). BILLING_MODE=stripe turns checkout on.
