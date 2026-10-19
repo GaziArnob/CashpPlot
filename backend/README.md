@@ -22,6 +22,8 @@ The seed builds one year of data for "Evergreen Traders" relative to today, with
 little over a week ahead (a large supplier bill), one customer ten days overdue and another more than
 30 days overdue. The demo business is on the Pro plan.
 
+Hosting and the optional services (email, WhatsApp, SMS, Stripe, Plaid) are covered in `../docs/deploy.md`.
+
 ## PostgreSQL and row-level security
 
 SQLite is the default. To run on PostgreSQL, create a role that is **not** a superuser (superusers skip row-level
@@ -81,6 +83,9 @@ otherwise Gemini's free vision; the result is a suggestion the owner confirms.
 | Plans | `GET/POST /billing/plan` (demo billing, no payments), 402 "Upgrade to Pro" on Pro-only routes; new businesses get a 14-day Pro trial |
 | Referrals | `GET/POST /referrals`, `POST /referrals/{id}/status` (consented introduction requests, not loan applications) |
 | Two-factor | `POST /auth/2fa/setup`, `/auth/2fa/enable`, `/auth/2fa/disable`; login then needs `code` |
+| Reminders | `POST /reminders/{id}/send` delivers by Brevo email, WhatsApp or Twilio SMS when that channel has keys, otherwise only records it (`delivery: manual`); `GET /messaging/channels` |
+| Pro payments | `POST /billing/checkout`, `/billing/portal`, `/billing/webhook` (Stripe, signature-checked), with `BILLING_MODE=stripe` |
+| Bank | `GET /bank/status`, `POST /bank/link-token`, `/bank/exchange`, `/bank/{id}/sync`, `DELETE /bank/{id}` (Plaid, owner and Pro) |
 | Settings | `GET/PUT /settings`, `GET/POST /lender-access`, `DELETE /lender-access/{id}`, `GET /lender/view` (X-Lender-Token), `GET /settings/export`, `DELETE /settings/account` |
 
 `/auth/refresh` reads the httpOnly refresh cookie and needs the header `X-Requested-With: fetch`.

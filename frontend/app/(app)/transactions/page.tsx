@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Camera, Plus, Search, Trash2, Upload } from "lucide-react";
+import BankPanel from "@/components/BankPanel";
 import Modal, { INPUT } from "@/components/Modal";
 import { Badge, Button, Card, ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -157,6 +158,8 @@ export default function TransactionsPage() {
             <input ref={imgRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && scan(e.target.files[0])} />
           </div>
         } />
+
+      <BankPanel onSynced={refresh} />
 
       {message && <div className={`mb-4 rounded-lg px-4 py-2.5 text-sm ${message.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"}`}>{message.text}</div>}
 

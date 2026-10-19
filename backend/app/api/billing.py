@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app import plans
+from app import plans, stripe_client
 from app.config import get_settings
 from app.db import get_db
 from app.deps import audit, get_business, require_owner
@@ -22,15 +22,47 @@ class PlanIn(BaseModel):
 
 @router.get("/plan")
 def current_plan(business: Business = Depends(get_business)):
-    return {**plans.describe(business), "billing_mode": get_settings().billing_mode,
-            "payments_connected": get_settings().billing_mode != "demo",
-            "note": "Demo billing: switching plans takes no payment." if get_settings().billing_mode == "demo" else None}
+    mode = get_settings().billing_mode
+    note = {"demo": "Demo billing: switching plans takes no payment.",
+            "stripe": None if stripe_client.configured() else "Payments are not set up yet."}.get(mode)
+    return {**plans.describe(business), "billing_mode": mode, "payments_connected": mode != "demo",
+            "can_checkout": mode == "stripe" and stripe_client.configured(),
+            "has_subscription": bool(business.stripe_customer_id), "note": note}
+
+
+def _stripe(fn, *a):
+    try:
+        return fn(*a)
+    except stripe_client.StripeError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+
+
+@router.post("/checkout")
+def checkout(business: Business = Depends(get_business), owner: User = Depends(require_owner)):
+    """Start paying for Pro. The owner is sent to Stripe's page; the webhook upgrades the plan once it is paid."""
+    if get_settings().billing_mode != "stripe" or not stripe_client.configured():
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Payments are not set up yet")
+    if business.plan == "pro" and business.stripe_subscription_id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "You already have a Pro subscription")
+    return {"url": _stripe(stripe_client.create_checkout, business.id, owner.email, business.stripe_customer_id)}
+
+
+@router.post("/portal")
+def portal(business: Business = Depends(get_business)):
+    """Stripe's page to change the card, see invoices or cancel."""
+    if not business.stripe_customer_id or not stripe_client.configured():
+        raise HTTPException(status.HTTP_409_CONFLICT, "There is no subscription to manage")
+    return {"url": _stripe(stripe_client.create_portal, business.stripe_customer_id)}
 
 
 @router.post("/plan")
 def change_plan(body: PlanIn, business: Business = Depends(get_business), owner: User = Depends(require_owner),
                 db: Session = Depends(get_db)):
-    if get_settings().billing_mode != "demo":
+    mode = get_settings().billing_mode
+    if mode == "stripe":
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "Use checkout to upgrade, or the billing portal to cancel; the plan then updates by itself")
+    if mode != "demo":
         raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "Payments are not connected yet")
     business.plan = body.plan
     business.plan_expires_at = None  # a chosen plan has no trial end

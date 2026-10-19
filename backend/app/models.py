@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -59,6 +59,8 @@ class Business(Base):
     # Where AI text may be produced: cloud = free hosted models (names masked), local = only a model on this
     # server, off = templates only.
     ai_mode: Mapped[str] = mapped_column(String(10), default="cloud", server_default="cloud")
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     owner: Mapped[User] = relationship(back_populates="businesses")
@@ -74,8 +76,11 @@ class Transaction(Base):
     type: Mapped[str] = mapped_column(String(10))  # income | expense
     category: Mapped[str] = mapped_column(String(60))
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    source: Mapped[str] = mapped_column(String(10), default="manual")  # manual | csv | scan | system
+    source: Mapped[str] = mapped_column(String(10), default="manual")  # manual | csv | scan | system | bank
+    external_id: Mapped[str | None] = mapped_column(String(64), nullable=True)  # the bank's id, so a sync never duplicates
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    __table_args__ = (UniqueConstraint("business_id", "external_id", name="uq_transactions_external"),)
 
 
 class Customer(Base):
@@ -531,3 +536,18 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(60))
     target: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class BankConnection(Base):
+    """A bank linked through Plaid. The access token is encrypted and never sent to the browser."""
+
+    __tablename__ = "bank_connections"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"), index=True)
+    institution_name: Mapped[str] = mapped_column(String(160))
+    item_id: Mapped[str] = mapped_column(String(64))
+    access_token: Mapped[str] = mapped_column(EncryptedString(512))
+    sync_cursor: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

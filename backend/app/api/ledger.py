@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import services
+from app import messaging, services
 from app.ai import templates
 from app.ai.text import polish_reminder
 from app.db import get_db
@@ -134,16 +134,34 @@ def list_reminders(business: Business = Depends(get_business), db: Session = Dep
 @router.post("/reminders/{reminder_id}/send", response_model=ReminderOut)
 def send_reminder(reminder_id: int, body: ReminderSendIn, business: Business = Depends(get_business),
                   user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """The owner's explicit confirmation. Delivery is mocked; plug in an SMS/WhatsApp gateway here."""
+    """The owner's explicit confirmation. If the channel is connected (Brevo, WhatsApp, Twilio) the message is
+    delivered; if not, it is only recorded as sent and the owner sends the text themselves (`delivery: manual`)."""
     r = owned(db, Reminder, reminder_id, business)
-    if body.message:
-        r.message = body.message
+    text = body.message or r.message
+    customer = db.get(Invoice, r.invoice_id).customer
+    try:
+        result = messaging.send(body.channel, to_email=customer.email, to_phone=customer.phone,
+                                subject=f"Payment reminder from {business.name}", text=text)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
+    except messaging.DeliveryError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"{e}. Nothing was sent; try again or send it yourself.")
+    r.message = text
     r.channel = body.channel
     r.status = "sent"
     r.sent_at = utcnow()
     db.commit()
-    audit(db, "reminder_sent", user.email, business_id=business.id, user_id=user.id, target=f"reminder:{r.id}")
+    audit(db, "reminder_sent", user.email, business_id=business.id, user_id=user.id,
+          target=f"reminder:{r.id}:{body.channel}:{'delivered' if result.delivered else 'manual'}")
+    r.delivery = "delivered" if result.delivered else "manual"
+    r.delivery_note = result.detail or None
     return r
+
+
+@router.get("/messaging/channels")
+def messaging_channels():
+    """Which reminder channels are connected. A channel that is not connected is sent by the owner by hand."""
+    return messaging.configured_channels()
 
 
 # Suppliers and bills (payables)

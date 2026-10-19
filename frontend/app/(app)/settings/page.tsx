@@ -10,7 +10,7 @@ import { forgetBusiness, useApi, useMe, type Business } from "@/lib/hooks";
 
 type Plan = {
   plan: string; effective_plan: "free" | "pro"; trial: boolean; trial_ended: boolean; days_left: number | null;
-  free_forecast_days: number; note: string | null; billing_mode: string;
+  free_forecast_days: number; note: string | null; billing_mode: string; can_checkout: boolean; has_subscription: boolean;
   features: Record<string, { label: string; included: boolean }>;
 };
 type Member = { id: number; name: string; email: string; active: boolean; two_factor: boolean };
@@ -123,6 +123,11 @@ function PlanCard({ plan, reload }: { plan: Plan; reload: () => void }) {
     reload();
   }, p === "pro" ? "You are on Pro" : "You are on Free");
   const pro = plan.effective_plan === "pro";
+  const goTo = (path: string) => a.run(async () => {
+    const r = await api<{ url: string }>(path, { method: "POST" });
+    window.location.href = r.url;
+  });
+  const stripe = plan.billing_mode === "stripe";
   return (
     <Section id="plan" title="Plan & billing" right={<Badge color={pro ? "green" : "slate"}>{pro ? "Pro" : "Free"}</Badge>}>
       {plan.trial && <p className="mb-3 text-sm text-slate-600">Free Pro trial: <b>{plan.days_left} day{plan.days_left === 1 ? "" : "s"} left</b>. After that you move to Free unless you choose Pro.</p>}
@@ -136,7 +141,12 @@ function PlanCard({ plan, reload }: { plan: Plan; reload: () => void }) {
         ))}
       </ul>
       <div className="mt-4 flex gap-2">
-        {pro ? <Button variant="secondary" onClick={() => change("free")}>Switch to Free</Button> : <Button onClick={() => change("pro")}>Choose Pro</Button>}
+        {stripe ? (
+          <>
+            {!(pro && plan.has_subscription) && <Button disabled={!plan.can_checkout} onClick={() => goTo("/billing/checkout")}>Upgrade to Pro</Button>}
+            {plan.has_subscription && <Button variant="secondary" onClick={() => goTo("/billing/portal")}>Manage billing</Button>}
+          </>
+        ) : pro ? <Button variant="secondary" onClick={() => change("free")}>Switch to Free</Button> : <Button onClick={() => change("pro")}>Choose Pro</Button>}
       </div>
       {plan.note && <p className="mt-3 text-xs text-slate-500">{plan.note}</p>}
       <Msg a={a} />

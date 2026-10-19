@@ -26,6 +26,7 @@ PRO_FEATURES = {
     "agent": "The AI assistant",
     "lender_access": "Sharing your data with lenders",
     "referrals": "Lender introductions",
+    "bank": "Connecting a bank account",
 }
 
 

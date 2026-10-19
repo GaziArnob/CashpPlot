@@ -1,0 +1,29 @@
+# Render blueprint: the API as a Docker web service. The database is Neon (or any PostgreSQL) and the
+# website is on Vercel; see docs/deploy.md. Secrets are entered in Render's dashboard, never here.
+services:
+  - type: web
+    name: cashpilot-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    plan: free
+    envVars:
+      - key: DATABASE_URL        # postgresql+psycopg://user:password@host/db?sslmode=require
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FIELD_ENCRYPTION_KEY
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: CORS_ORIGINS        # your Vercel address, e.g. https://cashpilot.vercel.app
+        sync: false
+      - key: APP_URL             # same address
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: BILLING_MODE
+        value: demo

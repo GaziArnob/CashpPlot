@@ -160,6 +160,8 @@ class ReminderOut(ORM):
     channel: str
     status: str
     generated_by: str
+    delivery: str | None = None  # delivered | manual, only on the send response
+    delivery_note: str | None = None
 
 
 class ReminderSendIn(BaseModel):

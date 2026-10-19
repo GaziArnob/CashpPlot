@@ -85,10 +85,27 @@ def init_db() -> None:
     from alembic import command
 
     cfg = _alembic_config()
+    _warn_if_rls_is_bypassed()
     tables = set(inspect(engine).get_table_names())
     if "users" in tables and "alembic_version" not in tables:
         command.stamp(cfg, BASELINE_REVISION)
     command.upgrade(cfg, "head")
+
+
+def _warn_if_rls_is_bypassed() -> None:
+    """Superusers and BYPASSRLS roles skip row-level security, so it would silently do nothing."""
+    import logging
+
+    if engine.dialect.name != "postgresql":
+        return
+    try:
+        with engine.connect() as conn:
+            skips = conn.execute(text("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user")).scalar()
+    except Exception:
+        return
+    if skips:
+        logging.getLogger(__name__).warning(
+            "The database role skips row-level security (superuser or BYPASSRLS). Use a plain role so tenant isolation applies in the database too.")
 
 
 def reset_db() -> None:

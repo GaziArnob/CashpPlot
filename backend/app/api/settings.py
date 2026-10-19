@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app import services
+from app import banking, services, stripe_client
 from app.db import Base, bypass_rls, get_db
 from app.deps import audit, get_business, get_current_user, needs, owned, require_owner
-from app.models import (Bill, Business, ChatMessage, CreditScore, Customer, Goal, Invoice, LenderAccess, Loan,
+from app.models import (BankConnection, Bill, Business, ChatMessage, CreditScore, Customer, Goal, Invoice, LenderAccess, Loan,
                         Notification, RefreshToken, Reminder, Repayment, Supplier, Transaction, User, utcnow)
 from app.schemas import BusinessOut, LenderAccessIn, SettingsIn
 
@@ -115,8 +115,23 @@ def export_data(business: Business = Depends(get_business), db: Session = Depend
 
 @router.delete("/settings/account", status_code=204, dependencies=[Depends(require_owner)])
 def delete_account(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Deletes the owner, their staff, their business and every record that belongs to it."""
+    """Deletes the owner, their staff, their business and every record that belongs to it.
+
+    An active paid subscription is cancelled first, so a deleted account is never billed again.
+    """
     for b in db.scalars(select(Business).where(Business.user_id == user.id)).all():
+        if b.stripe_subscription_id:
+            try:
+                stripe_client.cancel_subscription(b.stripe_subscription_id)
+            except stripe_client.StripeError:
+                raise HTTPException(status.HTTP_502_BAD_GATEWAY,
+                                    "Could not cancel your subscription, so the account was kept. "
+                                    "Cancel it in the billing portal and try again.")
+        for conn in db.scalars(select(BankConnection).where(BankConnection.business_id == b.id)).all():
+            try:
+                banking.remove_item(conn.access_token)
+            except banking.BankError:
+                pass  # best effort: the bank link is dropped with the data either way
         # Children before parents, for every table that carries a business_id.
         for table in reversed(Base.metadata.sorted_tables):
             if "business_id" in table.c and table.name != "businesses":

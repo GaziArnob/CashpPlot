@@ -31,6 +31,27 @@ class Settings(BaseSettings):
     tesseract_cmd: str = ""  # full path to tesseract.exe when it is not on PATH
     tessdata_prefix: str = ""  # folder holding eng.traineddata, if not next to the program
 
+    # Reminder delivery. A channel with no credentials is "not configured": the owner sends the text themselves.
+    brevo_api_key: str = ""  # email, https://www.brevo.com
+    brevo_sender_email: str = ""  # a sender verified in Brevo
+    brevo_sender_name: str = "CashPilot"
+    whatsapp_token: str = ""  # Meta WhatsApp Cloud API access token
+    whatsapp_phone_number_id: str = ""
+    twilio_account_sid: str = ""  # SMS, https://www.twilio.com
+    twilio_auth_token: str = ""
+    twilio_from: str = ""
+
+    # Stripe (use test keys until the business is verified). BILLING_MODE=stripe turns checkout on.
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_id: str = ""  # the recurring price of the Pro plan
+    app_url: str = "http://localhost:3000"  # where Stripe sends people back to
+
+    # Plaid bank connection. Start with PLAID_ENV=sandbox (fake banks, no real data).
+    plaid_client_id: str = ""
+    plaid_secret: str = ""
+    plaid_env: str = "sandbox"  # sandbox | production
+
     billing_mode: str = "demo"  # demo: plan changes take no payment. Anything else needs a payment provider.
     scheduler_enabled: bool = True  # run the daily job inside the app
     daily_job_hour: int = 7
