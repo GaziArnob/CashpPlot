@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     brevo_api_key: str = ""  # email, https://www.brevo.com
     brevo_sender_email: str = ""  # a sender verified in Brevo
     brevo_sender_name: str = "CashPilot"
+    # Mailjet (email over HTTPS, free plan: 200 a day). The sender must be a verified address.
+    mailjet_api_key: str = ""
+    mailjet_secret_key: str = ""
+    mailjet_sender_email: str = ""
     # Plain SMTP: any mailbox works, including a free Gmail one (smtp.gmail.com, port 587, an app password).
     smtp_host: str = ""
     smtp_port: int = 587

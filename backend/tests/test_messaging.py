@@ -134,6 +134,8 @@ class FakeSMTP:
     kind = "smtp"
 
     def __init__(self, host, port, timeout=None, context=None):
+        if FakeSMTP.mode == "blocked":
+            raise OSError(101, "Network is unreachable")      # what a host that blocks SMTP ports looks like
         self.log = {"kind": type(self).kind, "host": host, "port": port, "starttls": False}
 
     def __enter__(self):
@@ -243,3 +245,74 @@ def test_the_email_subject_cannot_carry_extra_headers():
     finally:
         s.smtp_host, s.smtp_user, s.smtp_password, s.brevo_api_key, smtplib.SMTP = saved
     assert FakeSMTP.sent[-1]["subject"] == "Hi Bcc: evil@example.com"
+
+
+def test_a_host_that_blocks_smtp_gets_a_message_that_says_so(client, demo_headers, gmail):
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    gmail.mode = "blocked"
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"})
+    detail = r.json()["detail"]
+    assert r.status_code == 502 and "block SMTP" in detail and "Brevo or Mailjet" in detail and "Nothing was sent" in detail
+
+
+# Mailjet (email over HTTPS, works on hosts that block SMTP)
+
+@pytest.fixture()
+def mailjet(monkeypatch):
+    s = get_settings()
+    for k, v in dict(brevo_api_key="", smtp_host="", mailjet_api_key="mj-key", mailjet_secret_key="mj-secret",
+                     mailjet_sender_email="me@example.com").items():
+        monkeypatch.setattr(s, k, v)
+    class Calls(list):
+        code = {"code": 200}
+
+    calls = Calls()
+    monkeypatch.setattr(httpx, "post", lambda url, **kw: (calls.append((url, kw)), FakeResp(calls.code["code"]))[1])
+    return calls
+
+
+def test_mailjet_alone_turns_email_on_and_sends_over_https(client, demo_headers, mailjet):
+    assert client.get("/messaging/channels", headers=demo_headers).json()["email"] is True
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers,
+                    json={"channel": "email", "message": "Edited by the owner"})
+    assert r.status_code == 200 and r.json()["delivery"] == "delivered"
+    url, kw = mailjet[-1]
+    msg = kw["json"]["Messages"][0]
+    assert url == "https://api.mailjet.com/v3.1/send" and kw["auth"] == ("mj-key", "mj-secret")
+    assert msg["From"]["Email"] == "me@example.com" and msg["To"] == [{"Email": "buyer@example.com"}]
+    assert msg["TextPart"] == "Edited by the owner" and "Payment reminder from" in msg["Subject"]
+
+
+def test_mailjet_rejection_keeps_the_draft(client, demo_headers, mailjet):
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    mailjet.code["code"] = 401
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"})
+    assert r.status_code == 502 and "Mailjet rejected" in r.json()["detail"] and "Nothing was sent" in r.json()["detail"]
+
+
+def test_incomplete_mailjet_settings_do_not_enable_email(client, demo_headers, monkeypatch):
+    s = get_settings()
+    for k, v in dict(brevo_api_key="", smtp_host="", mailjet_api_key="k", mailjet_secret_key="", mailjet_sender_email="a@b.co").items():
+        monkeypatch.setattr(s, k, v)
+    assert client.get("/messaging/channels", headers=demo_headers).json()["email"] is False
+
+
+def test_provider_order_is_brevo_then_mailjet_then_smtp(client, demo_headers, mailjet, monkeypatch):
+    import smtplib
+    s = get_settings()
+    monkeypatch.setattr(smtplib, "SMTP", lambda *a, **k: pytest.fail("SMTP used although an HTTPS provider is set"))
+    monkeypatch.setattr(s, "smtp_host", "smtp.gmail.com")
+    monkeypatch.setattr(s, "smtp_user", "o@gmail.com")
+    monkeypatch.setattr(s, "smtp_password", "x")
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"})
+    assert "api.mailjet.com" in mailjet[-1][0]
+    monkeypatch.setattr(s, "brevo_api_key", "b")
+    monkeypatch.setattr(s, "brevo_sender_email", "b@example.com")
+    client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"})
+    assert "api.brevo.com" in mailjet[-1][0]

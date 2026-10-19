@@ -35,6 +35,11 @@ def _brevo_ready() -> bool:
     return bool(s.brevo_api_key and s.brevo_sender_email)
 
 
+def _mailjet_ready() -> bool:
+    s = get_settings()
+    return bool(s.mailjet_api_key and s.mailjet_secret_key and s.mailjet_sender_email)
+
+
 def _smtp_ready() -> bool:
     s = get_settings()
     return bool(s.smtp_host and s.smtp_user and s.smtp_password)
@@ -43,7 +48,7 @@ def _smtp_ready() -> bool:
 def configured_channels() -> dict[str, bool]:
     s = get_settings()
     return {
-        "email": _brevo_ready() or _smtp_ready(),
+        "email": _brevo_ready() or _mailjet_ready() or _smtp_ready(),
         "whatsapp": bool(s.whatsapp_token and s.whatsapp_phone_number_id),
         "sms": bool(s.twilio_account_sid and s.twilio_auth_token and s.twilio_from),
     }
@@ -74,6 +79,18 @@ def _email(to: str, subject: str, text: str) -> Delivery:
     return Delivery(True, "brevo")
 
 
+def _mailjet(to: str, subject: str, text: str) -> Delivery:
+    s = get_settings()
+    try:
+        r = httpx.post("https://api.mailjet.com/v3.1/send", timeout=TIMEOUT, auth=(s.mailjet_api_key, s.mailjet_secret_key),
+                       json={"Messages": [{"From": {"Email": s.mailjet_sender_email, "Name": s.brevo_sender_name or "CashPilot"},
+                                           "To": [{"Email": to}], "Subject": " ".join(subject.split())[:200], "TextPart": text}]})
+    except httpx.HTTPError:
+        raise DeliveryError("Could not reach Mailjet")
+    _check(r, "Mailjet")
+    return Delivery(True, "mailjet")
+
+
 def _smtp(to: str, subject: str, text: str) -> Delivery:
     """Send through any SMTP mailbox. Port 465 uses SSL from the start, anything else upgrades with STARTTLS."""
     s = get_settings()
@@ -94,8 +111,11 @@ def _smtp(to: str, subject: str, text: str) -> Delivery:
             server.send_message(msg)
     except smtplib.SMTPAuthenticationError:
         raise DeliveryError("The email server refused the username or password")
-    except (smtplib.SMTPException, OSError):
-        raise DeliveryError("Could not send the email")
+    except smtplib.SMTPException:
+        raise DeliveryError("The email server did not accept the message")
+    except OSError:
+        raise DeliveryError("Could not connect to the email server. Some hosts, including Render's free plan, block "
+                            "SMTP; use an email service over HTTPS (Brevo or Mailjet) instead")
     return Delivery(True, "smtp")
 
 
@@ -149,7 +169,9 @@ def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: s
     if channel == "email":
         if not (to_email and EMAIL.match(to_email)):
             raise ValueError("This customer has no email address on file")
-        return _email(to_email, subject, text) if _brevo_ready() else _smtp(to_email, subject, text)
+        if _brevo_ready():
+            return _email(to_email, subject, text)
+        return _mailjet(to_email, subject, text) if _mailjet_ready() else _smtp(to_email, subject, text)
     phone = normalize_phone(to_phone)
     if phone is None:
         raise ValueError("This customer has no phone number on file in international format, e.g. +14155550123")
