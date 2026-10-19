@@ -178,3 +178,13 @@ date,amount,type,category,description
 | L2 | Import `sample.csv` (see the top of this file) and reload | The box becomes blue or disappears as records grow; the score rises; "Average monthly income" shows points near zero or positive, not a large minus |
 | L3 | Add a loan with its installments marked paid (Loan Center → Add a loan) and a bill, mark the bill paid on time | The "On-time repayment rate" factor improves and the "no repayment history" note goes away |
 | L4 | Score history card | Shows "No history yet" on day one, then a line as days pass (never an endless loading spinner) |
+
+## M. How to raise your score
+
+| # | Do this | Expect |
+|---|---|---|
+| M1 | Import `sample.csv`, add an invoice due 20 days ago for 4,000, open Credit Score | A card "How to raise your score": points to the next band, points to the next loan type, and steps such as "Collect the overdue invoices from X: +N points" |
+| M2 | Mark that invoice paid in the Ledger and reload the Credit Score page | The score rose by about the N the card promised, and that step is gone |
+| M3 | Add a loan or bill and pay it on time | The "Pay your next 3 bills on time" step shrinks or goes away as your repayment record builds |
+| M4 | A business already in the Excellent band | "You are in the top band" and no next band |
+| M5 | A brand-new account | The card lists what data to add; no invented gains |

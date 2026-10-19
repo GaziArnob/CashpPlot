@@ -101,6 +101,12 @@ def credit_score(business: Business = Depends(get_business), db: Session = Depen
     return services.credit_score(db, business)
 
 
+@router.get("/credit-score/plan", dependencies=CREDIT)
+def credit_plan(business: Business = Depends(get_business), db: Session = Depends(get_db)):
+    """Concrete actions that would raise the score, each with the points it adds (from re-running the score)."""
+    return services.credit_improvement(db, business)
+
+
 @router.get("/credit-score/history", dependencies=CREDIT)
 def credit_history(business: Business = Depends(get_business), db: Session = Depends(get_db)):
     rows = db.scalars(select(CreditScore).where(CreditScore.business_id == business.id)

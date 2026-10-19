@@ -130,6 +130,11 @@ def confidence_for(raw: dict) -> dict:
     return {"level": level, "months_used": raw["months_used"], "missing": missing}
 
 
+def points(f: dict[str, float]) -> int:
+    """The score for a set of factor values (the same formula score() uses)."""
+    return int(round(300 + 600 * sum(w * f[key] for key, _, w, _ in FACTORS)))
+
+
 def score(data: BusinessData, today: date) -> dict:
     f, raw = compute_features(data, today)
     total = 0.0
@@ -141,7 +146,7 @@ def score(data: BusinessData, today: date) -> dict:
             "key": key, "label": label, "weight": w, "value": round(f[key], 3),
             "baseline": b, "contribution": round(contribution, 1), "tip": TIPS[key],
         })
-    s = int(round(300 + 600 * total))
+    s = points(f)
 
     confidence = confidence_for(raw)
     positives = sorted([x for x in factors if x["contribution"] > 0], key=lambda x: -x["contribution"])[:3]

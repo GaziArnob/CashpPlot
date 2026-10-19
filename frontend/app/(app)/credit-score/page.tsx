@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDown, ArrowUp, Info } from "lucide-react";
+import { ArrowDown, ArrowUp, Clock, Info, Target } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Card, CardTitle, ErrorBox, Loading, PageHeader } from "@/components/ui";
+import { Badge, Card, CardTitle, ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { shortDate } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import type { Credit } from "@/lib/types";
@@ -35,6 +35,73 @@ function Gauge({ score, band }: { score: number; band: string }) {
       <text x={24} y={136} fontSize={10} fill="#64748b">300</text>
       <text x={200} y={136} fontSize={10} fill="#64748b">900</text>
     </svg>
+  );
+}
+
+type ScorePlan = {
+  score: number; band: string; disclaimer: string; needs_data: string[];
+  next_band: { band: string; score: number; points_needed: number; reachable: boolean } | null;
+  next_loan: { name: string; min_score: number; points_needed: number; reachable: boolean } | null;
+  actions: { id: string; title: string; detail: string; points: number; link: string; kind: "action" | "time" }[];
+  if_you_do_everything: { score: number; band: string; points: number; unlocks: string[] };
+};
+
+function ImproveCard() {
+  const { data: p, error, loading, reload } = useApi<ScorePlan>("/credit-score/plan");
+  if (loading && !p) return <Loading />;
+  if (error || !p) return <ErrorBox message={error ?? "No data"} onRetry={reload} />;
+  const everything = p.if_you_do_everything;
+  return (
+    <Card className="mb-6">
+      <CardTitle right={<Target className="size-4 text-emerald-700" />}>How to raise your score</CardTitle>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        {p.next_band ? (
+          <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm">
+            <b>{p.next_band.points_needed} points</b> to reach <b>{p.next_band.band}</b> ({p.next_band.score}).{" "}
+            <span className="text-slate-500">{p.next_band.reachable ? "The steps below can get you there." : "The steps below help but may not be enough alone."}</span>
+          </p>
+        ) : <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-900">You are in the top band. Keep doing what you are doing.</p>}
+        {p.next_loan ? (
+          <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm">
+            <b>{p.next_loan.points_needed} points</b> to unlock the <b>{p.next_loan.name}</b> (needs {p.next_loan.min_score}).{" "}
+            <Link href="/loan" className="font-medium text-emerald-700 hover:underline">Loan Center</Link>
+          </p>
+        ) : <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">Your score already meets every loan type&apos;s minimum.</p>}
+      </div>
+
+      {p.actions.length > 0 ? (
+        <ul className="divide-y divide-slate-100">
+          {p.actions.map((a) => (
+            <li key={a.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  {a.kind === "time" && <Clock className="size-4 text-slate-400" />}{a.title}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">{a.detail}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge color="green">+{a.points} points</Badge>
+                {a.kind === "action" && <Link href={a.link} className="text-sm font-medium text-emerald-700 hover:underline">Go</Link>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="text-sm text-slate-500">No single step stands out right now. Keep your records up to date and the score follows.</p>}
+
+      {everything.points > 0 && (
+        <p className="mt-3 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Do the steps above (not counting time) and your score could reach about <b>{everything.score}</b> ({everything.band}), {everything.points} points higher.
+          {everything.unlocks.length > 0 && <> That would unlock: {everything.unlocks.join(", ")}.</>}
+        </p>
+      )}
+      {p.needs_data.length > 0 && (
+        <div className="mt-3 text-sm">
+          <p className="font-medium">To make the score more accurate, add:</p>
+          <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-600">{p.needs_data.map((m) => <li key={m}>{m}</li>)}</ul>
+        </div>
+      )}
+      <p className="mt-3 text-xs text-slate-500">{p.disclaimer}</p>
+    </Card>
   );
 }
 
@@ -97,6 +164,8 @@ export default function CreditScorePage() {
           </div>
         </Card>
       </div>
+
+      <ImproveCard />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>

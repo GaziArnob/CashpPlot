@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app import alert_rules
 from app.ai.templates import day, money
-from app.engines import (collection, credit, data as engine_data, forecast, insights, loan, payables, payables_recommend, planner,
+from app.engines import (collection, credit, credit_plan, data as engine_data, forecast, insights, loan, payables, payables_recommend, planner,
                          products, whatif)
 from app.models import (ActionLog, Bill, Business, CollectionScore, CreditScore, FinancingOffer, Invoice, Loan,
                         LoanProduct, Notification, Repayment, PayablesRecommendation, ProductScore, Recommendation, Supplier, utcnow)
@@ -249,6 +249,10 @@ def credit_score(db: Session, business: Business, store: bool = True) -> dict:
                                factors={"factors": result["factors"]}))
             db.commit()
     return result
+
+
+def credit_improvement(db: Session, business: Business) -> dict:
+    return credit_plan.plan(load(db, business), today(), loan_products(db))
 
 
 def loan_products(db: Session) -> list[dict]:
