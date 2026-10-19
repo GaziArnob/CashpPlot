@@ -20,7 +20,19 @@ FACTORS = [
     ("business_age", "Business age", 0.10, 0.40),
 ]
 
-INCOME_LOW, INCOME_HIGH = 10_000, 2_000_000  # log-scale range for monthly income
+# Log-scale range for average monthly income, in the business's own currency. Wide enough that a one-person shop
+# earning a few thousand a month and a busy business earning hundreds of thousands both land inside it.
+INCOME_LOW, INCOME_HIGH = 500, 500_000
+
+# What each factor measures and what the owner can do about it, shown on the Credit Score page.
+TIPS = {
+    "income_level": "Record every sale and deposit in Transactions so your real monthly income shows. A higher average raises this.",
+    "income_stability": "Steady income scores higher than big swings. Record income when it arrives, not in lumps.",
+    "positive_months": "Counts months where more money came in than went out. Collect invoices on time and trim costs in weak months.",
+    "receivables": "Compares unpaid invoices with a month of income. Chase overdue customers and mark invoices paid in the Ledger.",
+    "repayment": "Loan installments and supplier bills paid on or before the due date. Add your loans (Loan Center) and bills (Ledger, I owe), and mark them paid on time.",
+    "business_age": "Counts from your business start date, up to 5 years. It grows by itself.",
+}
 
 POSITIVE_TEXT = {
     "income_level": "Strong monthly income raised your score by {pts} points.",
@@ -38,6 +50,10 @@ NEGATIVE_TEXT = {
     "repayment": "Late installments or bills lowered your score by {pts} points.",
     "business_age": "A short business history lowered your score by {pts} points.",
 }
+NO_DATA_TEXT = ("Nothing is recorded yet, so every part of the score starts low. "
+                "Add your sales and expenses and it builds from there.")
+NO_HISTORY_TEXT = ("No loan or bill repayment history yet, so this part is held at a neutral level. "
+                   "Paying a bill or installment on time builds it.")
 
 
 def band_for(score: int) -> str:
@@ -99,6 +115,21 @@ def compute_features(data: BusinessData, today: date) -> tuple[dict[str, float],
     return f, raw
 
 
+def confidence_for(raw: dict) -> dict:
+    """How much to trust the score: it needs real records. `missing` says exactly what to add."""
+    missing = []
+    if raw["avg_monthly_income"] <= 0:
+        missing.append("No income is recorded yet. Add your sales in Transactions (or import a CSV).")
+    if raw["months_used"] < 3:
+        missing.append("Add at least 3 months of sales and expenses. The score looks at up to 12 months.")
+    elif raw["months_used"] < 6:
+        missing.append("A few more months of records (6 or more) will make the score steadier.")
+    if raw["obligations_due"] == 0:
+        missing.append("Add your loans and supplier bills and mark them paid on time to build your repayment record.")
+    level = "low" if raw["avg_monthly_income"] <= 0 or raw["months_used"] < 3 else "medium" if raw["months_used"] < 6 else "high"
+    return {"level": level, "months_used": raw["months_used"], "missing": missing}
+
+
 def score(data: BusinessData, today: date) -> dict:
     f, raw = compute_features(data, today)
     total = 0.0
@@ -108,15 +139,19 @@ def score(data: BusinessData, today: date) -> dict:
         contribution = 600 * w * (f[key] - b)
         factors.append({
             "key": key, "label": label, "weight": w, "value": round(f[key], 3),
-            "baseline": b, "contribution": round(contribution, 1),
+            "baseline": b, "contribution": round(contribution, 1), "tip": TIPS[key],
         })
     s = int(round(300 + 600 * total))
 
+    confidence = confidence_for(raw)
     positives = sorted([x for x in factors if x["contribution"] > 0], key=lambda x: -x["contribution"])[:3]
     negatives = sorted([x for x in factors if x["contribution"] < 0], key=lambda x: x["contribution"])[:3]
     reasons_up = [POSITIVE_TEXT[x["key"]].format(pts=round(x["contribution"])) for x in positives]
-    reasons_down = [NEGATIVE_TEXT[x["key"]].format(pts=round(-x["contribution"])) for x in negatives]
+    reasons_down = [NO_HISTORY_TEXT if x["key"] == "repayment" and raw["obligations_due"] == 0
+                    else NEGATIVE_TEXT[x["key"]].format(pts=round(-x["contribution"])) for x in negatives]
 
+    if raw["avg_monthly_income"] <= 0:       # no records at all: do not blame the owner for each factor
+        reasons_up, reasons_down = [], [NO_DATA_TEXT]
     return {
         "score": s,
         "band": band_for(s),
@@ -124,5 +159,6 @@ def score(data: BusinessData, today: date) -> dict:
         "reasons_positive": reasons_up,
         "reasons_negative": reasons_down,
         "inputs": raw,
+        "confidence": confidence,
         "as_of": today.isoformat(),
     }

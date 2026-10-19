@@ -184,11 +184,12 @@ export type Bill = {
 };
 
 export type CreditFactor = {
-  key: string; label: string; weight: number; value: number; baseline: number; contribution: number;
+  key: string; label: string; weight: number; value: number; baseline: number; contribution: number; tip?: string;
 };
 
 export type Credit = {
   score: number; band: string; factors: CreditFactor[]; reasons_positive: string[]; reasons_negative: string[];
+  confidence?: { level: "low" | "medium" | "high"; months_used: number; missing: string[] };
   inputs: Record<string, number>;
 };
 

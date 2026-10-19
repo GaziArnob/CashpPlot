@@ -169,3 +169,12 @@ date,amount,type,category,description
 | K13 | Add a loan with the first installment due in 2 days (Loan Center → Add a loan) | "Loan installment ... is due" |
 | K14 | Set a goal (Reports) due within 14 days and not yet reached | A goal-deadline alert |
 | K15 | Turn off one type in Settings → Notifications | That type is never created again |
+
+## L. Credit score with little data
+
+| # | Do this | Expect |
+|---|---|---|
+| L1 | Open Credit Score on a brand-new account | A yellow box: "only a starting point", listing exactly what to add (income, 3 months of records, loans/bills). The score is low (about 377) and says nothing is recorded, not that you did something wrong |
+| L2 | Import `sample.csv` (see the top of this file) and reload | The box becomes blue or disappears as records grow; the score rises; "Average monthly income" shows points near zero or positive, not a large minus |
+| L3 | Add a loan with its installments marked paid (Loan Center → Add a loan) and a bill, mark the bill paid on time | The "On-time repayment rate" factor improves and the "no repayment history" note goes away |
+| L4 | Score history card | Shows "No history yet" on day one, then a line as days pass (never an endless loading spinner) |

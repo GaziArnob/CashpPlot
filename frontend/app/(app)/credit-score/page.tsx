@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowDown, ArrowUp } from "lucide-react";
+import Link from "next/link";
+import { ArrowDown, ArrowUp, Info } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardTitle, ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { shortDate } from "@/lib/format";
@@ -47,6 +48,22 @@ export default function CreditScorePage() {
   return (
     <>
       <PageHeader title="Credit Score" subtitle="Explainable score from your income, cash flow, dues and repayment history" />
+      {data.confidence && data.confidence.level !== "high" && (
+        <div className={`mb-6 rounded-xl border px-5 py-4 text-sm ${data.confidence.level === "low" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-sky-200 bg-sky-50 text-sky-900"}`}>
+          <p className="flex items-center gap-2 font-medium">
+            <Info className="size-4 shrink-0" />
+            {data.confidence.level === "low" ? "This score is only a starting point: there is too little data behind it yet." : "This score will get steadier as you add more records."}
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-9">
+            {data.confidence.missing.map((m) => <li key={m}>{m}</li>)}
+          </ul>
+          <p className="mt-3 pl-6 text-xs">
+            Add data in <Link href="/transactions" className="font-medium underline">Transactions</Link>,{" "}
+            <Link href="/ledger" className="font-medium underline">Ledger</Link> and{" "}
+            <Link href="/loan" className="font-medium underline">Loan Center</Link>. The score updates by itself.
+          </p>
+        </div>
+      )}
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="flex flex-col items-center">
           <Gauge score={data.score} band={data.band} />
@@ -93,6 +110,7 @@ export default function CreditScorePage() {
                     {f.contribution >= 0 ? "+" : ""}{Math.round(f.contribution)}
                   </span>
                 </div>
+                {f.tip && <p className="mb-1.5 text-xs text-slate-500">{f.tip}</p>}
                 <div className="relative h-2 rounded-full bg-slate-100">
                   <div className="absolute top-0 h-2 w-px bg-slate-300" style={{ left: "50%" }} />
                   <div className={`absolute top-0 h-2 rounded-full ${f.contribution >= 0 ? "bg-emerald-500" : "bg-rose-500"}`}
@@ -117,6 +135,10 @@ export default function CreditScorePage() {
                 <Line dataKey="score" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
+          ) : history.data ? (
+            <p className="text-sm text-slate-500">
+              No history yet. A new point is saved each day your score is calculated, so this line fills in over the next few days.
+            </p>
           ) : <Loading />}
         </Card>
       </div>
