@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CashPilot: feature guide</title>
+<style>
+@page { size: A4; margin: 15mm 13mm; }
+body { font-family: "Segoe UI", Arial, sans-serif; color: #1f1d24; font-size: 10.5pt; line-height: 1.5; }
+h1 { font-size: 26pt; margin: 0; color: #3b3bb0; }
+.sub { color: #5c5a66; margin: 2px 0 14px; }
+h2 { font-size: 12.5pt; margin: 0; color: #fff; background: #4b4bc8; padding: 6px 10px; border-radius: 6px 6px 0 0; display: flex; justify-content: space-between; }
+h2 span { font-weight: 400; font-size: 9.5pt; opacity: .92; }
+.f { border: 1px solid #d6d4e6; border-radius: 6px; margin: 0 0 12px; page-break-inside: avoid; }
+.f .b { padding: 8px 12px 6px; }
+.row { display: grid; grid-template-columns: 112px 1fr; gap: 6px; padding: 3px 0; border-bottom: 1px dashed #e6e4f0; }
+.row:last-child { border-bottom: 0; }
+.k { font-weight: 600; color: #3b3bb0; font-size: 9.5pt; }
+code { background: #f1f0f7; padding: 0 4px; border-radius: 3px; font-size: 9.2pt; }
+ul { margin: 0; padding-left: 16px; }
+.toc td { padding: 2px 10px 2px 0; font-size: 10pt; }
+.note { background: #f6f5fc; border-left: 4px solid #5b5bd6; padding: 7px 11px; margin: 10px 0; }
+.pb { page-break-before: always; }
+</style></head><body>
+
+<h1>CashPilot: feature guide</h1>
+<div class="sub">Proti feature ki kore, kivabe use korbe, bhitore kivabe kaj kore, Free na Pro, ar kon service-er sathe connected</div>
+
+<div class="note"><b>Mul niyom:</b> shob number engine (testable hishab) theke ashe, AI theke na. AI shudhu bhasha-e bujhay. Kono payment, message, reminder ba loan application owner approve na korle jay na. <b>Free:</b> transactions, customers, invoices, dashboard, 7-day forecast, notifications. <b>Pro (14-day free trial):</b> baki shob.</div>
+
+<table class="toc"><tr>
+<td>1 Account, onboarding</td><td>2 Dashboard</td><td>3 Cash Advisor</td><td>4 Notifications</td></tr><tr>
+<td>5 Transactions</td><td>6 Cash Flow</td><td>7 Ledger</td><td>8 Customers</td></tr><tr>
+<td>9 Supplier Plans</td><td>10 Products</td><td>11 Credit Score</td><td>12 Loan Center</td></tr><tr>
+<td>13 Reports, goals</td><td>14 AI Agent</td><td>15 Settings</td><td>16 Lender view</td></tr><tr>
+<td>17 Quick add</td><td>18 Daily job</td><td>19 Security</td><td>20 Landing, login</td></tr></table>
+
+<div class="f"><h2>1. Account and onboarding <span>Free</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Signup, login, 3-step setup (business name, currency, opening balance, safety cash level). Notun account-e 14 din Pro trial.</div></div>
+<div class="row"><div class="k">Kivabe</div><div><code>/signup</code> → onboarding → dashboard. Password minimum 8 character. Login-e 2FA on thakle 6-digit code lage.</div></div>
+<div class="row"><div class="k">Bhitore</div><div>Password bcrypt hash, short-lived access token + rotating refresh cookie, rate limit (beshi bar bhul password dile block). <code>api/auth.py</code></div></div>
+<div class="row"><div class="k">Connected</div><div>Website (Vercel) → API (Render) → Neon database.</div></div></div></div>
+
+<div class="f"><h2>2. Dashboard <span>Free</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Ek nojore: cash balance, ei masher net, overdue receivable, credit score, 14-day projected balance chart, "Collect first" list, shortage warning, Today's summary (AI-er shohoj bhasha), alert card.</div></div>
+<div class="row"><div class="k">Kivabe</div><div>Login korle-i ashe. Shortage banner-e "See the plan" chap, Cash Advisor-e jabe.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>/dashboard/summary</code>. Number forecast + credit engine theke; summary sentence AI likhe, tar number engine-er sathe milano hoy.</div></div>
+<div class="row"><div class="k">Connected</div><div>Forecast, collections, credit score, notifications, Groq/Gemini (shudhu sentence).</div></div></div></div>
+
+<div class="f"><h2>3. Cash Advisor <span>Pro</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Shortage-er din ar gap bole, ar ta mitanor step shajiye dey: overdue taka tola, slow stock clear, supplier bill delay, kharoch kom. Proti step-e kot taka ashbe, kobe, ki jhuki.</div></div>
+<div class="row"><div class="k">Kivabe</div><div>Step approve / mark done / dismiss / reopen. Approve korleo kichu nijer theke jay na.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>engines/planner.py</code>: shobcheye shosta ar nirapod step age. Proti step forecast-e abar chalie effect hishab kore. Action log thake.</div></div>
+<div class="row"><div class="k">Connected</div><div>Forecast, Collections, Products, Payables engine.</div></div></div></div>
+
+<div class="f"><h2>4. Notifications <span>Free</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Sidebar-e "Notifications" link, pashe lal unread count. Alert: cash shortage, cash low, overdue customer, late/due invoice, bill due, supplier plan, loan installment, low stock, credit drop, unusual spending, sales drop, lender follow-up, goal deadline, bank reminder, trial. Total 16 rule.</div></div>
+<div class="row"><div class="k">Kivabe</div><div>Page-e Unread/All tab, Mark read, Mark all read, X dismiss, "Open" chaple oi page-e jay. Settings-e proti dhoroner alert on/off, urgent alert email.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>alert_rules.py</code> (proti rule alada, ekta fail korle onnogulo cholbe), <code>notify.py</code> (dedupe key + cooldown, tai ek alert bar bar ashe na), daily job email pathay.</div></div>
+<div class="row"><div class="k">Connected</div><div>Ledger, loans, products, credit, goals; Mailjet (urgent email).</div></div></div></div>
+
+<div class="f"><h2>5. Transactions <span>Free</span> <span>(bank import: Pro)</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Income/expense list, filter (money in/out, category, date, search), manual add, CSV import, receipt scan, bank import.</div></div>
+<div class="row"><div class="k">Kivabe</div><div><b>Add:</b> amount, category. <b>CSV:</b> <code>date,amount,type,category,description</code> column. <b>Scan receipt:</b> chhobi upload, form pre-fill hoy, tumi confirm korle save. <b>Connect a bank:</b> Plaid sandbox (<code>user_good</code>/<code>pass_good</code>).</div></div>
+<div class="row"><div class="k">Bhitore</div><div>Receipt: Tesseract OCR, na thakle Gemini vision. OCR shudhu suggestion. Bank import: Plaid, pending ar onno currency skip, duplicate ek-i transaction duibar na.</div></div>
+<div class="row"><div class="k">Connected</div><div>Forecast, credit score, reports (shob transaction-er upor nirbhor kore). Plaid, Gemini/Tesseract.</div></div></div></div>
+
+<div class="f"><h2>6. Cash Flow <span>7 din Free · 30 din Pro</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Protidin-er projected balance, shortage-er prothom din, upcoming payments calendar, what-if simulator.</div></div>
+<div class="row"><div class="k">Kivabe</div><div>7/14/30 din toggle. What-if-e sales ba kharoch bodle chalale base vs scenario chart.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>engines/forecast.py</code>: opening balance + tarikh-wala bill/loan/recurring + prediction-er sales ar running cost. Safety level-er niche gele flag. <code>whatif.py</code> forecast-ta bodlano input-e abar chalay.</div></div>
+<div class="row"><div class="k">Connected</div><div>Transactions, Ledger, Loans, Recurring expenses.</div></div></div></div>
+
+<div class="f"><h2>7. Ledger <span>Free</span> <span>(recovery ranking: Pro)</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>"They owe me" (customer-er invoice) ar "I owe" (supplier-er bill). Invoice add, payment record (partial-o), mark paid. Reminder draft kore pathano.</div></div>
+<div class="row"><div class="k">Kivabe</div><div><b>Reminder:</b> draft toiri → text edit → channel (WhatsApp/Email) → Send. Provider connected na thakle "Recorded as sent, CashPilot did not deliver it" bole copy button dey, fake "sent" dekhay na.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>messaging.py</code>: Email Brevo → Mailjet → SMTP, WhatsApp Meta ba Twilio (<code>WHATSAPP_PROVIDER</code>). Fail hole draft thake, provider-er nijer karon dekhay.</div></div>
+<div class="row"><div class="k">Connected</div><div>Customers, Suppliers, Collections, Notifications; Mailjet, Twilio/Meta WhatsApp.</div></div></div></div>
+
+<div class="f"><h2>8. Customers <span>Free</span> <span>(credit limit, risk: Pro)</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Customer list, profile (invoice, payment history, risk level), add ar edit (pencil icon ba "Edit details"), credit limit.</div></div>
+<div class="row"><div class="k">Kivabe</div><div>Phone <code>+8801XXXXXXXXX</code> format, WhatsApp-er jonno. Phone/email khali korle muche jay, name khali howa jabe na.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>engines/collection.py</code>: Collection Priority Score 0-100 (amount 30%, aging 25%, payment history 15%, cash-gap 15%, ...). Phone/email database-e encrypted (Fernet).</div></div>
+<div class="row"><div class="k">Connected</div><div>Ledger, reminders, recovery list.</div></div></div></div>
+
+<div class="f"><h2>9. Supplier Plans <span>Pro</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Boro bill-er karone cash tight hole supplier-ke instalment-er proposal, financing option-er tulona, supplier-ke message-er draft.</div></div>
+<div class="row"><div class="k">Kivabe</div><div>Bill select → plan toiri (draft) → message draft → approve → supplier accept/reject record. Nothing auto-send hoy na. Financing offer gulo demo data.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>engines/payables.py</code>: protita taka ekbar-i gona, "confirmed" (known) ar "estimated" (forecast) alada. <code>payables_recommend.py</code>: shobcheye shosta step jeta sotti lowest balance safety level-er upore tole. AI shudhu message-er bhasha likhe, supplier-er asol name code diye dhaka.</div></div>
+<div class="row"><div class="k">Connected</div><div>Ledger bills, forecast, Groq/Gemini.</div></div></div></div>
+
+<div class="f"><h2>10. Products <span>Pro</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Proti product-er margin, sales trend, stock koy din cholbe. Quadrant: star / cash cow / slow / dead / new. Push, keep, shrink na clear.</div></div>
+<div class="row"><div class="k">Kivabe</div><div>Product add (sku, cost, price), sale record, stock movement. Sale credit-e hole invoice-er sathe jora.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>engines/products.py</code>: 30/90 din units, revenue, gross margin, inventory turnover, cash conversion speed.</div></div>
+<div class="row"><div class="k">Connected</div><div>Transactions (sales), Cash Advisor (clear-stock step), low-stock alert.</div></div></div></div>
+
+<div class="f"><h2>11. Credit Score <span>Pro</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>300-900 score, 6 factor, proti factor-er point-er karon, score history chart, "How to raise your score" planner.</div></div>
+<div class="row"><div class="k">Kivabe</div><div>Notun account-e "only a starting point" box bole ki data lagbe (income, 3 mash record, loan/bill). Planner bole kon kaj-e koto point (jemon overdue taka tola: +N).</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>engines/credit.py</code> (6 weighted factor, income 500-500,000 scale), <code>credit_plan.py</code> proti kaj-ke formula-te simulate kore point gone. Kono number AI banay na.</div></div>
+<div class="row"><div class="k">Connected</div><div>Transactions, invoices, loans, bills. Daily job protidin snapshot rakhe.</div></div></div></div>
+
+<div class="f"><h2>12. Loan Center <span>Pro</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Loan readiness, safe monthly installment, 8 dhoroner loan (credit score-er min 500-700 shorto, score bhalo hole sosta), What-if, My loans (nijer loan ar installment), lender introduction request.</div></div>
+<div class="row"><div class="k">Kivabe</div><div>Match kora offer-e "Request intro": consent tick na korle Save disabled. Request-er status: submitted → contacted → funded, pichone jay na. <b>Kono lender-ke asol-e kichu pathay na</b>, eta tomar record.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>loan_catalog.py</code>, <code>engines/loan.py</code> (<code>evaluate</code>, <code>emi</code>, <code>recommend</code>). Loan figure approval na, estimate.</div></div>
+<div class="row"><div class="k">Connected</div><div>Credit Score, cash flow, Referrals, Lender view.</div></div></div></div>
+
+<div class="f"><h2>13. Reports and goals <span>Pro</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Masik Profit and Loss, insight (ki bodlalo ar keno), PDF/export download, goal (jemon "Emergency reserve") deadline soho.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>engines/insights.py</code> + <code>api/reports.py</code>. Goal deadline kachhe ashle notification.</div></div>
+<div class="row"><div class="k">Connected</div><div>Transactions, Notifications.</div></div></div></div>
+
+<div class="f"><h2>14. AI Agent <span>Pro</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Sadharon bhashay proshno: "Will I run short next week?". Tomar nijer number diye uttor.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>ai/agent.py</code>: bounded tool-use loop. AI tool call kore engine-theke number ane. AI-r likha jei number engine-er na, seta reject. Free AI na pele keyword intent + template uttor, tai chat shobshomoy chole. Customer/supplier name code kore pathay (Settings-e AI privacy: cloud, local-only, off).</div></div>
+<div class="row"><div class="k">Connected</div><div>Prai shob engine, Groq, Gemini.</div></div></div></div>
+
+<div class="f"><h2>15. Settings <span>Owner only</span></h2><div class="b">
+<div class="row"><div class="k">Business</div><div>Name, currency, safety cash level.</div></div>
+<div class="row"><div class="k">AI privacy</div><div>Cloud / local-only / off.</div></div>
+<div class="row"><div class="k">Plan</div><div>Free ba Pro. Billing demo mode (kono payment hoy na).</div></div>
+<div class="row"><div class="k">Team</div><div>Staff add (name, email, password). Staff shudhu Transactions, Ledger, Customers dekhe. Owner remove korle login sathe sathe bondho.</div></div>
+<div class="row"><div class="k">Lender access</div><div>Lender-er jonno expiring, revoke-yogyo link. Token <b>ekbar-i</b> dekhay. Tumi je jinish tick korbe shudhu seta dekhte pabe.</div></div>
+<div class="row"><div class="k">2FA</div><div>Authenticator app (TOTP) on/off.</div></div>
+<div class="row"><div class="k">Notifications</div><div>Kon alert chai, urgent email.</div></div>
+<div class="row"><div class="k">Data</div><div>Download my data (JSON), Delete account (type DELETE, sob muche jay).</div></div></div></div>
+
+<div class="f"><h2>16. Lender view <span>Public link</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Lender <code>/lender</code> e token boshale owner-er dewa tick-kora tothyo-i dekhe. Revoke/expire hole "Access token invalid" dekhay.</div></div>
+<div class="row"><div class="k">Bhitore</div><div>Token hash kore rakha, consent record, audit log.</div></div></div></div>
+
+<div class="f"><h2>17. Quick add forms <span>Free</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Ledger, Products, Supplier, Plans page-e hater kaje add korar form. CSV na diye ekti ekti kore dewa jay.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>components/QuickAdd.tsx</code> shared form, proti form sorasori API call kore.</div></div></div></div>
+
+<div class="f"><h2>18. Daily job <span>Automatic</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Roj shokale: credit score snapshot, action plan refresh, alert rule chalay, urgent email pathay, cash crunch ashle owner-ke alert. Dui bar chalaleo ekbar-i alert.</div></div>
+<div class="row"><div class="k">Bhitore</div><div><code>jobs/daily.py</code> + <code>scheduler.py</code>. Render free sleep korle shomoy-moto na-o chalte pare (free hosting-er shimana).</div></div></div></div>
+
+<div class="f"><h2>19. Security <span>Always on</span></h2><div class="b">
+<div class="row"><div class="k">Ki ache</div><div>bcrypt password, rotating refresh token, optional 2FA, contact field encryption, <b>PostgreSQL row-level security</b> (ek business onno-r data dekhe na), audit log, rate limit, data export, full account delete, secret shudhu Render Environment-e.</div></div></div></div>
+
+<div class="f"><h2>20. Landing and login <span>Public</span></h2><div class="b">
+<div class="row"><div class="k">Ki kore</div><div>Landing page (feature, how it works, pricing), split-screen login, "Fill in the demo account" button. ForgeFlow-style dark theme (indigo, Inter font).</div></div>
+<div class="row"><div class="k">Demo</div><div><code>demo@example.com</code> / <code>Demo@12345</code> (Evergreen Traders, ek bochhorer sample data). Live-e demo account <code>SEED_DEMO_ON_START=true</code> diye toiri hobe.</div></div></div></div>
+
+<div class="note"><b>Ekhon obostha:</b> shob feature code-e ache ar local-e test pass (261). Live-e baki: demo account toiri, WhatsApp-er asol delivery (Twilio/Meta-er shorto). Stripe, real lender API, real bank bondho/sandbox.</div>
+</body></html>
