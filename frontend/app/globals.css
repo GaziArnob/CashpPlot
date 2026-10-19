@@ -220,3 +220,32 @@ nav a:hover svg { transform: scale(1.15); }
   .ff-fade, .ff-pop, .ff-grow, .ff-ping, .ff-orb, .ff-sheen:hover::after { animation: none; }
   .ff-reveal { opacity: 1; transform: none; transition: none; }
 }
+
+/* ---------- animated background ---------- */
+@keyframes ff-aurora {
+  0%   { transform: translate3d(-6%, -4%, 0) rotate(0deg) scale(1); }
+  33%  { transform: translate3d(5%, 3%, 0) rotate(8deg) scale(1.08); }
+  66%  { transform: translate3d(-3%, 6%, 0) rotate(-6deg) scale(1.04); }
+  100% { transform: translate3d(-6%, -4%, 0) rotate(0deg) scale(1); }
+}
+
+/* slow drifting colour blobs behind everything */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 34% at 22% 28%, rgb(var(--ff-brand) / 0.55), transparent 70%),
+    radial-gradient(34% 30% at 78% 22%, rgb(139 114 224 / 0.42), transparent 70%),
+    radial-gradient(40% 34% at 62% 82%, rgb(108 178 242 / 0.26), transparent 70%),
+    radial-gradient(30% 28% at 12% 85%, rgb(76 195 138 / 0.18), transparent 70%);
+  filter: blur(40px);
+  will-change: transform;
+  animation: ff-aurora 28s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none; }
+}
