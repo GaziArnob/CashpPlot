@@ -171,7 +171,7 @@ function Ranking({ k }: { k: number }) {
                   <div className="flex items-center gap-2">
                     <span className="w-8 text-right font-semibold tabular">{Math.round(c.score)}</span>
                     <div className="h-1.5 w-14 rounded-full bg-slate-100">
-                      <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${c.score}%` }} />
+                      <div className="ff-grow h-1.5 rounded-full bg-emerald-500" style={{ width: `${c.score}%` }} />
                     </div>
                   </div>
                 </td>

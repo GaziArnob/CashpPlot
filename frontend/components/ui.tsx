@@ -2,7 +2,7 @@
 
 import { Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`ff-rise rounded-xl border border-slate-200 bg-white p-5 ${className}`}>{children}</div>;
@@ -29,6 +29,32 @@ export function PageHeader({ title, subtitle, right }: { title: string; subtitle
   );
 }
 
+/** Counts the first number in a text up from zero ("$65,000" -> "$0" ... "$65,000"). Other values show as they are. */
+function CountUp({ value }: { value: ReactNode }) {
+  const text = typeof value === "string" ? value : typeof value === "number" ? String(value) : null;
+  const match = text?.match(/^(\D*?)(-?\d[\d,]*)(\.\d+)?(.*)$/);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    if (!match || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / 900);
+      setProgress(1 - Math.pow(1 - p, 3));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [text]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!match || !text) return <>{value}</>;
+  const [, prefix, whole, decimals = "", suffix] = match;
+  if (progress >= 1 || typeof window === "undefined" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return <>{text}</>;
+  const target = Number(whole.replace(/,/g, ""));
+  const shown = Math.round(target * progress);
+  const formatted = whole.includes(",") ? shown.toLocaleString("en-US") : String(shown);
+  return <>{prefix}{formatted}{decimals}{suffix}</>;
+}
+
 export function Stat({ label, value, hint, tone = "default" }: {
   label: string; value: ReactNode; hint?: ReactNode; tone?: "default" | "good" | "bad" | "warn";
 }) {
@@ -37,7 +63,7 @@ export function Stat({ label, value, hint, tone = "default" }: {
     <Card className="relative overflow-hidden">
       <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/60 to-transparent" />
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold tabular ${color}`}>{value}</p>
+      <p className={`mt-2 text-2xl font-semibold tabular ${color}`}><CountUp value={value} /></p>
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
     </Card>
   );
@@ -64,7 +90,7 @@ export function Button({ children, onClick, variant = "primary", disabled, type 
   disabled?: boolean; type?: "button" | "submit"; className?: string;
 }) {
   const styles = {
-    primary: "bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-[0_6px_18px_-6px_rgb(91_91_214/0.7)] hover:from-emerald-700 hover:to-emerald-700 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none",
+    primary: "ff-sheen bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-[0_6px_18px_-6px_rgb(91_91_214/0.7)] hover:from-emerald-700 hover:to-emerald-700 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none",
     secondary: "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:text-slate-400",
     ghost: "text-slate-600 hover:bg-slate-100",
   }[variant];

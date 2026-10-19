@@ -30,7 +30,7 @@ export default function BalanceChart({ data, threshold, height = 280, showBand =
         <ReferenceLine y={threshold} stroke="#f2817f" strokeDasharray="4 4"
           label={{ value: `Threshold ${compact(threshold)}`, position: "insideTopLeft", fill: "#f2817f", fontSize: 11 }} />
         <ReferenceLine y={0} stroke="#6e6b76" />
-        <Line dataKey="balance" stroke="#8b72e0" strokeWidth={2} isAnimationActive={false}
+        <Line dataKey="balance" stroke="#8b72e0" strokeWidth={2} isAnimationActive animationDuration={1100}
           dot={(p) => {
             const { cx, cy, payload, index } = p as { cx: number; cy: number; payload: Point; index: number };
             if (payload.status !== "shortage" && !(payload.balance < threshold)) return <g key={index} />;

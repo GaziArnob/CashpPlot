@@ -201,7 +201,7 @@ export default function CreditScorePage() {
                 <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fontSize: 11, fill: "#908d98" }} tickLine={false} />
                 <YAxis domain={[300, 900]} tick={{ fontSize: 11, fill: "#908d98" }} tickLine={false} axisLine={false} width={36} />
                 <Tooltip labelFormatter={(l) => shortDate(String(l))} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                <Line dataKey="score" stroke="#8b72e0" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
+                <Line dataKey="score" stroke="#8b72e0" strokeWidth={2} dot={{ r: 3 }} isAnimationActive animationDuration={1000} />
               </LineChart>
             </ResponsiveContainer>
           ) : history.data ? (

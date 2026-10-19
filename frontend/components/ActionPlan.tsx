@@ -109,7 +109,7 @@ export default function ActionPlan({ plan, onChanged }: { plan: Plan; onChanged:
           <span>{plan.done_count} done{plan.realized_so_far ? ` · ${money(plan.realized_so_far)} received` : ""}</span>
         </div>
         <div className="h-2 rounded-full bg-slate-100">
-          <div className={`h-2 rounded-full ${plan.gap_covered ? "bg-emerald-500" : "bg-amber-500"}`} style={{ width: `${pct}%` }} />
+          <div className={`ff-grow h-2 rounded-full ${plan.gap_covered ? "bg-emerald-500" : "bg-amber-500"}`} style={{ width: `${pct}%` }} />
         </div>
         {!plan.gap_covered && <p className="mt-1 text-xs text-rose-600">{money(plan.remaining_gap)} still missing</p>}
       </div>

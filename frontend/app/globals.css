@@ -177,3 +177,46 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 @media (prefers-reduced-motion: reduce) {
   .ff-rise, .ff-float, .ff-skeleton { animation: none; }
 }
+
+/* ---------- animation layer ---------- */
+@keyframes ff-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ff-pop { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes ff-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes ff-ping { 0% { box-shadow: 0 0 0 0 rgb(var(--ff-danger) / 0.55); } 70%, 100% { box-shadow: 0 0 0 7px rgb(var(--ff-danger) / 0); } }
+@keyframes ff-orb { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30px, -20px) scale(1.12); } }
+@keyframes ff-sweep { from { transform: translateX(-120%); } to { transform: translateX(220%); } }
+
+.ff-fade { animation: ff-fade 0.25s ease both; }
+.ff-pop { animation: ff-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.ff-grow { transform-origin: left center; animation: ff-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both; }
+.ff-ping { animation: ff-ping 2s ease-out infinite; }
+.ff-orb { animation: ff-orb 14s ease-in-out infinite; }
+
+/* cards in a grid or stack come in one after another */
+.ff-rise:nth-child(2) { animation-delay: 0.06s; }
+.ff-rise:nth-child(3) { animation-delay: 0.12s; }
+.ff-rise:nth-child(4) { animation-delay: 0.18s; }
+.ff-rise:nth-child(5) { animation-delay: 0.24s; }
+.ff-rise:nth-child(n+6) { animation-delay: 0.3s; }
+
+/* scroll reveal (landing page) */
+.ff-reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.ff-reveal.in { opacity: 1; transform: none; }
+
+/* primary buttons: a light sweep on hover */
+.ff-sheen { position: relative; overflow: hidden; }
+.ff-sheen::after {
+  content: ""; position: absolute; inset: 0; width: 40%;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.28), transparent);
+  transform: translateX(-120%); pointer-events: none;
+}
+.ff-sheen:hover::after { animation: ff-sweep 0.8s ease; }
+
+/* sidebar links nudge on hover */
+nav a svg { transition: transform 0.2s ease; }
+nav a:hover svg { transform: scale(1.15); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ff-fade, .ff-pop, .ff-grow, .ff-ping, .ff-orb, .ff-sheen:hover::after { animation: none; }
+  .ff-reveal { opacity: 1; transform: none; transition: none; }
+}

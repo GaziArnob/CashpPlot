@@ -24,7 +24,7 @@ function Breakdown({ title, rows, total, color, cur }: { title: string; rows: Re
           {entries.map(([name, value]) => (
             <li key={name}>
               <div className="flex justify-between text-sm"><span>{name}</span><span className="tabular">{money(value, cur)}</span></div>
-              <div className="mt-1 h-1.5 rounded-full bg-slate-100"><div className="h-1.5 rounded-full" style={{ width: `${total ? Math.max(2, (100 * value) / total) : 0}%`, background: color }} /></div>
+              <div className="mt-1 h-1.5 rounded-full bg-slate-100"><div className="ff-grow h-1.5 rounded-full" style={{ width: `${total ? Math.max(2, (100 * value) / total) : 0}%`, background: color }} /></div>
             </li>
           ))}
         </ul>
@@ -148,7 +148,7 @@ export default function ReportsPage() {
                         <button onClick={() => removeGoal(g)} className="text-slate-400 hover:text-rose-600" aria-label="Delete"><Trash2 className="size-4" /></button>
                       </span>
                     </div>
-                    <div className="mt-1.5 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-emerald-500" style={{ width: `${pct}%` }} /></div>
+                    <div className="mt-1.5 h-2 rounded-full bg-slate-100"><div className="ff-grow h-2 rounded-full bg-emerald-500" style={{ width: `${pct}%` }} /></div>
                     <p className="mt-1 text-xs text-slate-500">{money(g.current_amount, cur)} of {money(g.target_amount, cur)} ({pct}%){g.deadline && ` · by ${shortDate(g.deadline)}`}</p>
                   </li>
                 );
