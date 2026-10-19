@@ -1,3 +1,4 @@
+import threading
 import logging
 from contextlib import asynccontextmanager
 
@@ -20,11 +21,15 @@ s = get_settings()
 async def lifespan(_: FastAPI):
     init_db()
     if s.seed_demo_on_start:
-        try:
-            from seed.seed import ensure_demo_account
-            ensure_demo_account()
-        except Exception:  # a failed demo seed must never stop the API from starting
-            logging.getLogger(__name__).exception("Demo account seed failed")
+        # In the background: a year of data is thousands of rows, and a remote database must not hold up start-up
+        # (the host's health check would give up and restart the service).
+        def _seed_demo() -> None:
+            try:
+                from seed.seed import ensure_demo_account
+                logging.getLogger(__name__).info("Demo account created" if ensure_demo_account() else "Demo account already there")
+            except Exception:
+                logging.getLogger(__name__).exception("Demo account seed failed")
+        threading.Thread(target=_seed_demo, daemon=True).start()
     task = scheduler.start()
     yield
     if task:
