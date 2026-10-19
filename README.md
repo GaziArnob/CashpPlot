@@ -9,7 +9,7 @@ figure it adds that the engines did not produce is rejected. Nothing is paid, se
 pressing the button.
 
 **Live demo:** https://chinese-hackathon.vercel.app (API: https://cashpilot-api-26h3.onrender.com)
-**Demo login (local):** `demo@example.com` / `Demo@12345`
+**Local demo data:** `python -m seed.seed`, then sign in as `demo@example.com` / `Demo@12345`
 
 The first request after a pause on the free hosting can take about 50 seconds.
 
@@ -73,8 +73,7 @@ Tests: `cd backend && .venv/Scripts/python -m pytest -q` (SQLite by default; Pos
 
 ## Deploy
 
-Free tiers: Vercel (website), Render (API), Neon (database). Step by step, including the optional services and the
-live demo account (`SEED_DEMO_ON_START=true`), in [docs/deploy.md](docs/deploy.md).
+Free tiers: Vercel (website), Render (API), Neon (database). Step by step, including the optional services, in [docs/deploy.md](docs/deploy.md).
 
 ## Documents
 

@@ -414,19 +414,6 @@ def seed(today: date | None = None, rng_seed: int = 42, reset: bool = True) -> d
     return summary
 
 
-def ensure_demo_account() -> bool:
-    """Create the demo account with its full year of data if it is missing. Never wipes or edits anything that
-    exists. Returns True when it created it. Used at start-up when SEED_DEMO_ON_START is on."""
-    db = SessionLocal()
-    try:
-        if db.query(User).filter(User.email == DEMO_EMAIL).first():
-            return False
-    finally:
-        db.close()
-    seed(reset=False)
-    return True
-
-
 if __name__ == "__main__":
     result = seed()
     for k, v in result.items():
