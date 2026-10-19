@@ -162,3 +162,10 @@ date,amount,type,category,description
 | K6 | Settings → Notifications: untick "Invoices coming due", Save, add another invoice due soon, open the Dashboard | No new invoice alert |
 | K7 | Settings → Notifications: "Also email me urgent alerts" | Greyed out with a note until Brevo is set up; once it is, tick it and an urgent alert is emailed once |
 | K8 | Sign in as a staff member | No bell and no Notifications page |
+| K9 | The bell sits at the top right of every page on a desktop; on a phone it is in the top bar | Yes |
+| K10 | Create a product with 100 in stock and record two sales of 45 in the last 3 weeks | A "will run out in about N days" alert (Products running low) |
+| K11 | Add an invoice due 10 days ago | "Invoice #N from X is 10 days late" (separate from the 30+ day customer alert) |
+| K12 | Add a bill due 3 days ago | An urgent "was due" alert |
+| K13 | Add a loan with the first installment due in 2 days (Loan Center → Add a loan) | "Loan installment ... is due" |
+| K14 | Set a goal (Reports) due within 14 days and not yet reached | A goal-deadline alert |
+| K15 | Turn off one type in Settings → Notifications | That type is never created again |

@@ -20,10 +20,20 @@ log = logging.getLogger(__name__)
 # type -> (label shown to the owner, default severity)
 TYPES = {
     "cash_shortage": ("Cash shortage warnings", "critical"),
+    "cash_low": ("Cash already below your safety level", "critical"),
     "overdue": ("Customers far behind on paying", "warning"),
+    "invoice_late": ("Invoices that are late", "warning"),
     "invoice_due": ("Invoices coming due", "info"),
     "bill_due": ("Supplier bills coming due", "warning"),
+    "plan_due": ("Agreed supplier plan payments", "warning"),
     "loan_due": ("Loan installments coming due", "warning"),
+    "low_stock": ("Products running low", "warning"),
+    "credit_drop": ("Credit score drops", "warning"),
+    "spending_spike": ("Unusual spending", "warning"),
+    "sales_drop": ("Sales dropping", "warning"),
+    "referral": ("Lender introduction follow-ups", "info"),
+    "goal": ("Goal deadlines", "info"),
+    "bank": ("Bank connection reminders", "info"),
     "trial": ("Plan and trial reminders", "info"),
 }
 

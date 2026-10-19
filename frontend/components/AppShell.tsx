@@ -79,13 +79,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
-        <div className="flex items-center justify-between pr-3">
-          <Link href="/" className="flex items-center gap-2 px-5 py-5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-600 text-white"><Wallet className="size-4" /></div>
-            <span className="text-lg font-semibold tracking-tight">CashPilot</span>
-          </Link>
-          {!staff && <NotificationBell />}
-        </div>
+        <Link href="/" className="flex items-center gap-2 px-5 py-5">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-600 text-white"><Wallet className="size-4" /></div>
+          <span className="text-lg font-semibold tracking-tight">CashPilot</span>
+        </Link>
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-3">
           {groups.map((g) => (
             <div key={g.title}>
@@ -122,6 +119,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
         </header>
+        {!staff && (
+          <div className="sticky top-0 z-20 hidden justify-end border-b border-slate-200 bg-white/90 px-8 py-2 backdrop-blur md:flex">
+            <NotificationBell />
+          </div>
+        )}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
       </div>
     </div>

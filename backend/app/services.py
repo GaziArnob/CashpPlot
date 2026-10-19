@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import notify, plans
+from app import alert_rules
 from app.ai.templates import day, money
 from app.engines import (collection, credit, data as engine_data, forecast, insights, loan, payables, payables_recommend, planner,
                          products, whatif)
@@ -276,52 +276,8 @@ def pnl(db: Session, business: Business, year: int, month: int) -> dict:
 
 
 def refresh_notifications(db: Session, business: Business, fc: dict, ranked: list[dict]) -> None:
-    """Raise the alerts that apply today. Each thing is raised once per cooldown (see notify.py), so loading the
-    dashboard or running the daily job twice does not duplicate anything."""
-    cur, t = business.currency, today()
-    soon = t + timedelta(days=3)
-
-    if fc["first_shortage"]:
-        s = fc["first_shortage"]
-        notify.create(db, business, "cash_shortage",
-                      f"Cash may fall {money(s['gap'], cur)} below your safety level on {day(s['date'])}.",
-                      key=f"shortage:{s['date']}", link="/cashflow", cooldown_days=3)
-    for r in ranked:
-        if r["max_days_overdue"] > 30:
-            notify.create(db, business, "overdue",
-                          f"{r['customer_name']} is {r['max_days_overdue']} days overdue on {money(r['outstanding'], cur)}.",
-                          key=f"overdue:{r['customer_id']}", link="/ledger", cooldown_days=7)
-
-    for inv in db.scalars(select(Invoice).where(Invoice.business_id == business.id, Invoice.status != "paid",
-                                                Invoice.due_date >= t, Invoice.due_date <= soon)):
-        notify.create(db, business, "invoice_due",
-                      f"{inv.customer.name} owes {money(round(inv.outstanding), cur)}, due {day(inv.due_date.isoformat())}.",
-                      key=f"invoice:{inv.id}", link="/ledger", cooldown_days=5)
-    for b in db.scalars(select(Bill).where(Bill.business_id == business.id, Bill.status != "paid", Bill.due_date <= soon)):
-        late = b.due_date < t
-        notify.create(db, business, "bill_due",
-                      f"Bill of {money(round(b.outstanding), cur)} to {b.supplier.name} "
-                      f"{'was due' if late else 'is due'} {day(b.due_date.isoformat())}.",
-                      key=f"bill:{b.id}", link="/payables", cooldown_days=3, severity="critical" if late else None)
-    for rep in db.scalars(select(Repayment).where(Repayment.business_id == business.id, Repayment.paid_date.is_(None),
-                                                  Repayment.due_date <= soon)):
-        loan = db.get(Loan, rep.loan_id)
-        if loan is None or loan.status != "active":
-            continue
-        late = rep.due_date < t
-        notify.create(db, business, "loan_due",
-                      f"Loan installment of {money(round(rep.amount), cur)} to {loan.lender} "
-                      f"{'was due' if late else 'is due'} {day(rep.due_date.isoformat())}.",
-                      key=f"loan:{rep.id}", link="/loan", cooldown_days=3, severity="critical" if late else None)
-
-    plan = plans.describe(business)
-    if plan["trial"] and plan["days_left"] is not None and plan["days_left"] <= 3:
-        notify.create(db, business, "trial",
-                      f"Your Pro trial ends in {plan['days_left']} day{'s' if plan['days_left'] != 1 else ''}. "
-                      "Choose a plan in Settings to keep every feature.",
-                      key="trial_ending", link="/settings#plan", cooldown_days=2)
-    elif plan["trial_ended"]:
-        notify.create(db, business, "trial", "Your Pro trial has ended, so you are on the Free plan. "
-                      "Choose Pro in Settings to get everything back.", key="trial_ended", link="/settings#plan",
-                      cooldown_days=30)
-    db.commit()
+    """Raise the alerts that apply today (see alert_rules.py). Each thing is raised once per cooldown, so loading
+    the dashboard or running the daily job twice does not duplicate anything."""
+    alert_rules.generate(db, business, alert_rules.Context(
+        today=today(), fc=fc, ranked=ranked, data=load(db, business),
+        product_scores=lambda: product_scores(db, business)))
