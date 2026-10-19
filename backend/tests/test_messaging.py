@@ -411,3 +411,49 @@ def test_metas_whatsapp_is_used_first_when_both_are_set(client, demo_headers, tw
 def test_twilio_without_a_whatsapp_sender_gives_no_whatsapp(client, demo_headers, twilio_only, monkeypatch):
     monkeypatch.setattr(get_settings(), "twilio_whatsapp_from", "")
     assert client.get("/messaging/channels", headers=demo_headers).json() == {"email": False, "whatsapp": False}
+
+
+# Choosing the WhatsApp provider
+
+@pytest.fixture()
+def both_whatsapps(twilio_only, monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "whatsapp_token", "meta-token")
+    monkeypatch.setattr(s, "whatsapp_phone_number_id", "999")
+    return twilio_only
+
+
+def _send_whatsapp(client, headers):
+    reminder = _draft(client, headers)
+    _customer_contact(client, headers, reminder)
+    return client.post(f"/reminders/{reminder['id']}/send", headers=headers, json={"channel": "whatsapp"})
+
+
+def test_whatsapp_provider_auto_prefers_meta(client, demo_headers, both_whatsapps):
+    assert messaging.whatsapp_provider() == "meta"
+    assert _send_whatsapp(client, demo_headers).status_code == 200
+    assert "graph.facebook.com" in both_whatsapps[-1][0]
+
+
+def test_whatsapp_provider_twilio_wins_over_broken_meta_keys(client, demo_headers, both_whatsapps, monkeypatch):
+    monkeypatch.setattr(get_settings(), "whatsapp_provider", "twilio")
+    assert messaging.whatsapp_provider() == "twilio"
+    assert _send_whatsapp(client, demo_headers).status_code == 200
+    assert "api.twilio.com" in both_whatsapps[-1][0]
+
+
+def test_whatsapp_provider_meta_ignores_twilio(client, demo_headers, both_whatsapps, monkeypatch):
+    monkeypatch.setattr(get_settings(), "whatsapp_provider", "meta")
+    assert _send_whatsapp(client, demo_headers).status_code == 200
+    assert "graph.facebook.com" in both_whatsapps[-1][0]
+
+
+def test_a_chosen_provider_without_its_keys_means_no_whatsapp(client, demo_headers, twilio_only, monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "whatsapp_provider", "meta")                 # Meta chosen, but only Twilio is set up
+    assert messaging.whatsapp_provider() is None
+    assert client.get("/messaging/channels", headers=demo_headers).json()["whatsapp"] is False
+    monkeypatch.setattr(s, "whatsapp_provider", "twilio")
+    assert messaging.whatsapp_provider() == "twilio"
+    monkeypatch.setattr(s, "whatsapp_provider", " Twilio ")             # stray spaces and capitals are fine
+    assert messaging.whatsapp_provider() == "twilio"

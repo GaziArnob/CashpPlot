@@ -50,11 +50,32 @@ def _twilio_ready() -> bool:
     return bool(s.twilio_account_sid and s.twilio_auth_token)
 
 
+def _meta_ready() -> bool:
+    s = get_settings()
+    return bool(s.whatsapp_token and s.whatsapp_phone_number_id)
+
+
+def _twilio_whatsapp_ready() -> bool:
+    return _twilio_ready() and bool(get_settings().twilio_whatsapp_from)
+
+
+def whatsapp_provider() -> str | None:
+    """"meta", "twilio" or None. WHATSAPP_PROVIDER picks one; "auto" prefers Meta when its keys are set."""
+    choice = (get_settings().whatsapp_provider or "auto").strip().lower()
+    if choice == "meta":
+        return "meta" if _meta_ready() else None
+    if choice == "twilio":
+        return "twilio" if _twilio_whatsapp_ready() else None
+    if _meta_ready():
+        return "meta"
+    return "twilio" if _twilio_whatsapp_ready() else None
+
+
 def configured_channels() -> dict[str, bool]:
     s = get_settings()
     return {
         "email": _brevo_ready() or _mailjet_ready() or _smtp_ready(),
-        "whatsapp": bool(s.whatsapp_token and s.whatsapp_phone_number_id) or (_twilio_ready() and bool(s.twilio_whatsapp_from)),
+        "whatsapp": whatsapp_provider() is not None,
     }
 
 
@@ -208,7 +229,6 @@ def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: s
     if phone is None:
         raise ValueError("This customer has no phone number on file in international format, e.g. +14155550123")
     if channel == "whatsapp":
-        s = get_settings()
-        if s.whatsapp_token and s.whatsapp_phone_number_id:
+        if whatsapp_provider() == "meta":
             return _whatsapp(phone, text, template_params or [])
         return _twilio_whatsapp(phone, text)

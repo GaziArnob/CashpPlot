@@ -55,7 +55,7 @@ Set `TWILIO_WHATSAPP_FROM=whatsapp:+14155238886` (Twilio's sandbox number; see C
 WhatsApp message, where the exact number and your join phrase are shown). With your `TWILIO_ACCOUNT_SID` and
 `TWILIO_AUTH_TOKEN`, the WhatsApp channel works. Each recipient must first send the join phrase
 (`join something-something`) from their WhatsApp to the sandbox number; after that, free text reaches them for 24 hours
-from their last message. If the Meta variables are also set, Meta's WhatsApp is used instead.
+from their last message. If the Meta variables are also set, Meta's WhatsApp is used instead, unless you set `WHATSAPP_PROVIDER=twilio` (or `meta`) to choose.
 
 ### Twilio trial notes
 

@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = ""  # defaults to smtp_user
+    # Which WhatsApp provider to use: auto (Meta if its keys are set, else Twilio), meta, or twilio.
+    whatsapp_provider: str = "auto"
     whatsapp_token: str = ""  # Meta WhatsApp Cloud API access token
     whatsapp_phone_number_id: str = ""
     whatsapp_template_name: str = ""  # an approved template; lets a reminder reach customers who have not messaged you
