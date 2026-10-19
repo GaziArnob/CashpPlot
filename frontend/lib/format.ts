@@ -1,7 +1,8 @@
 export function money(n: number | null | undefined, currency = "USD") {
+  if (currency.toUpperCase() === "RMB") currency = "CNY"; // RMB is the everyday name for the yuan (ISO code CNY)
   if (n === null || n === undefined) return "—";
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(Math.round(n));
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0, ...(currency === "CNY" ? { currencyDisplay: "narrowSymbol" as const } : {}) }).format(Math.round(n));
   } catch {
     return `${currency} ${Math.round(n).toLocaleString("en-US")}`; // not a recognised currency code
   }

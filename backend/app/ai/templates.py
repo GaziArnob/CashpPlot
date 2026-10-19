@@ -2,7 +2,7 @@
 
 from datetime import date
 
-CURRENCY_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£", "INR": "₹", "CAD": "CA$", "AUD": "A$", "SGD": "S$"}
+CURRENCY_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£", "INR": "₹", "CAD": "CA$", "AUD": "A$", "SGD": "S$", "CNY": "¥", "RMB": "¥"}
 
 # Reminder messages: short-message length, polite but firm. {amount} is already formatted.
 REMINDER_TEMPLATES = {

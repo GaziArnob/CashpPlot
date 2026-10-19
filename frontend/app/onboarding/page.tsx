@@ -15,8 +15,8 @@ const TYPES: { label: string; icon: LucideIcon }[] = [
   { label: "Manufacturing", icon: Factory },
   { label: "Other", icon: Shapes },
 ];
-const CURRENCIES: { code: string; symbol: string }[] = [
-  { code: "USD", symbol: "$" }, { code: "EUR", symbol: "€" }, { code: "GBP", symbol: "£" }, { code: "CAD", symbol: "C$" },
+const CURRENCIES: { code: string; symbol: string; label?: string }[] = [
+  { code: "USD", symbol: "$" }, { code: "CNY", symbol: "¥", label: "RMB" }, { code: "EUR", symbol: "€" }, { code: "GBP", symbol: "£" }, { code: "CAD", symbol: "C$" },
   { code: "AUD", symbol: "A$" }, { code: "SGD", symbol: "S$" }, { code: "INR", symbol: "₹" },
 ];
 // how long the business has been running, as the number of days back its start date is set
@@ -164,7 +164,7 @@ export default function OnboardingPage() {
                 {CURRENCIES.map((c) => (
                   <button key={c.code} type="button" onClick={() => setCurrency(c.code)} aria-pressed={currency === c.code}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${currency === c.code ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-slate-300 text-slate-600 hover:bg-slate-100"}`}>
-                    {c.symbol} {c.code}
+                    {c.symbol} {c.label ?? c.code}
                   </button>
                 ))}
               </div>
