@@ -7,8 +7,6 @@ import { Gauge, LineChart, ShieldCheck, Wallet } from "lucide-react";
 import { login } from "@/lib/api";
 import { Button, ErrorBox } from "@/components/ui";
 
-const DEMO = { email: "demo@example.com", password: "Demo@12345" }; // from backend/seed/seed.py
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -89,10 +87,6 @@ export default function LoginPage() {
             )}
             {error && <ErrorBox message={error} />}
             <Button type="submit" disabled={busy} className="w-full py-2.5">{busy ? "Signing in…" : "Sign in"}</Button>
-            <button type="button" onClick={() => { setEmail(DEMO.email); setPassword(DEMO.password); }}
-              className="w-full text-center text-sm text-emerald-800 hover:underline">
-              Fill in the demo account
-            </button>
             <p className="text-center text-sm text-slate-500">New here? <Link href="/signup" className="font-medium text-emerald-800 hover:underline">Create an account</Link></p>
           </form>
         </div>
