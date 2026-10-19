@@ -88,7 +88,17 @@ def _mailjet(to: str, subject: str, text: str) -> Delivery:
     except httpx.HTTPError:
         raise DeliveryError("Could not reach Mailjet")
     _check(r, "Mailjet")
-    return Delivery(True, "mailjet")
+    # Mailjet can answer 200 and still refuse the message; the per-message status says which.
+    try:
+        msg = r.json()["Messages"][0]
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+        msg = None
+    if isinstance(msg, dict) and msg.get("Status") not in (None, "success"):
+        reason = ((msg.get("Errors") or [{}])[0] or {}).get("ErrorMessage") or "it was refused"
+        raise DeliveryError(f"Mailjet did not send the message: {str(reason)[:160]}")
+    sent_to = (msg or {}).get("To") or [{}]
+    ref = (sent_to[0] or {}).get("MessageID") if isinstance(sent_to, list) and sent_to else None
+    return Delivery(True, "mailjet", f"Mailjet message id {ref}. Check Mailjet's message history if it does not arrive." if ref else "")
 
 
 def _smtp(to: str, subject: str, text: str) -> Delivery:

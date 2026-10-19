@@ -8,8 +8,15 @@ from app.config import get_settings
 
 
 class FakeResp:
+    body = None
+
     def __init__(self, code=200):
         self.status_code = code
+
+    def json(self):
+        if FakeResp.body is None:
+            raise ValueError("no body")
+        return FakeResp.body
 
 
 @pytest.fixture()
@@ -316,3 +323,18 @@ def test_provider_order_is_brevo_then_mailjet_then_smtp(client, demo_headers, ma
     monkeypatch.setattr(s, "brevo_sender_email", "b@example.com")
     client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"})
     assert "api.brevo.com" in mailjet[-1][0]
+
+
+def test_mailjet_answering_200_with_an_error_status_is_not_reported_as_sent(client, demo_headers, mailjet):
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    FakeResp.body = {"Messages": [{"Status": "error", "Errors": [{"ErrorMessage": "Sender not validated: me@example.com"}]}]}
+    try:
+        r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"})
+        assert r.status_code == 502 and "Sender not validated" in r.json()["detail"] and "Nothing was sent" in r.json()["detail"]
+        assert next(x for x in client.get("/reminders", headers=demo_headers).json() if x["id"] == reminder["id"])["status"] == "draft"
+        FakeResp.body = {"Messages": [{"Status": "success", "To": [{"Email": "buyer@example.com", "MessageID": 123456789}]}]}
+        ok = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "email"}).json()
+        assert ok["delivery"] == "delivered" and "123456789" in ok["delivery_note"]
+    finally:
+        FakeResp.body = None
