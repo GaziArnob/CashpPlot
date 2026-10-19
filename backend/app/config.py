@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     app_name: str = "SME Finance Assistant"
     database_url: str = "sqlite:///./finance.db"
+    seed_demo_on_start: bool = False  # create demo@example.com with a year of sample data if it does not exist
     secret_key: str = "change-me-in-production"
     field_encryption_key: str = ""  # Fernet key; derived from secret_key when empty
     access_token_minutes: int = 15

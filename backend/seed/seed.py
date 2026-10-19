@@ -145,12 +145,15 @@ class Shop:
         self.sold_today.clear()
 
 
-def seed(today: date | None = None, rng_seed: int = 42) -> dict:
+def seed(today: date | None = None, rng_seed: int = 42, reset: bool = True) -> dict:
+    """Build the demo business. reset=True wipes the whole database first (local use); reset=False adds the
+    demo account next to existing data and leaves everything else alone."""
     today = today or date.today()
     rng = random.Random(rng_seed)
     start = today - timedelta(days=365)
 
-    reset_db()
+    if reset:
+        reset_db()
     db = SessionLocal()
 
     user = User(name="Alex Morgan", email=DEMO_EMAIL, phone="555-0000", password_hash=hash_password(DEMO_PASSWORD))
@@ -340,7 +343,7 @@ def seed(today: date | None = None, rng_seed: int = 42) -> dict:
     make_loan("Lotus Microfinance", 200_000, 20.0, 10, add_months(start, -1), late_index=4)
     make_loan("Summit Bank", 150_000, 13.0, 18, add_months(today, -6))
 
-    for o in FINANCING_OFFERS:
+    for o in FINANCING_OFFERS if reset or not db.query(FinancingOffer).count() else []:
         db.add(FinancingOffer(provider=o[0], name=o[1], kind=o[2], advance_rate_pct=o[3], fee_pct=o[4],
                               monthly_rate_pct=o[5], min_amount=o[6], max_amount=o[7], max_days=o[8],
                               lead_days=o[9], is_demo=True))
@@ -409,6 +412,19 @@ def seed(today: date | None = None, rng_seed: int = 42) -> dict:
     }
     db.close()
     return summary
+
+
+def ensure_demo_account() -> bool:
+    """Create the demo account with its full year of data if it is missing. Never wipes or edits anything that
+    exists. Returns True when it created it. Used at start-up when SEED_DEMO_ON_START is on."""
+    db = SessionLocal()
+    try:
+        if db.query(User).filter(User.email == DEMO_EMAIL).first():
+            return False
+    finally:
+        db.close()
+    seed(reset=False)
+    return True
 
 
 if __name__ == "__main__":

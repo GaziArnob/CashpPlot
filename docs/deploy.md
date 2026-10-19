@@ -35,6 +35,13 @@ below are what the files in it are set up for. Free-tier limits change, so check
 3. Put the Vercel address into Render's `CORS_ORIGINS` and `APP_URL`.
 4. The Vercel Hobby plan is for personal, non-commercial use.
 
+### Demo account on the live site
+
+Set `SEED_DEMO_ON_START=true` in Render (Environment), then Manual Deploy. At start-up the API creates
+`demo@example.com` / `Demo@12345` (Evergreen Traders, one year of sample data) **only if it does not exist**. It never
+wipes or edits other accounts. Set it back to `false` afterwards if you like; the data stays. To rebuild the demo from
+scratch, delete that account in the app (Settings, Delete account) and deploy again with the flag on.
+
 ## 4. Turning on the optional services
 
 Each one is off until its keys are set in Render, and none of them acts without the owner pressing a button.

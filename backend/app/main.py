@@ -19,6 +19,12 @@ s = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    if s.seed_demo_on_start:
+        try:
+            from seed.seed import ensure_demo_account
+            ensure_demo_account()
+        except Exception:  # a failed demo seed must never stop the API from starting
+            logging.getLogger(__name__).exception("Demo account seed failed")
     task = scheduler.start()
     yield
     if task:
