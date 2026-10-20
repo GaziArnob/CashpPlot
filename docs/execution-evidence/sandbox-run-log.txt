@@ -1,0 +1,113 @@
+CashPilot sandbox run log
+Started 2026-10-20 21:10:01  |  API http://localhost:8000  |  database: seeded demo business (Evergreen Traders, local sandbox)
+====================================================================================================
+[01] 2026-10-20 21:10:03  POST /auth/login  ->  HTTP 200  (2318 ms)
+     Sign in as the demo owner
+     access token received (163 chars, 15-minute lifetime); refresh token set as an httpOnly cookie: True
+[02] 2026-10-20 21:10:03  POST /auth/login  ->  HTTP 401  (247 ms)
+     Wrong password is refused
+     response: {'detail': 'Wrong email or password'}
+[03] 2026-10-20 21:10:03  GET /dashboard/summary  ->  HTTP 401  (4 ms)
+     Request without a token is refused
+     response: {'detail': 'Not authenticated'}
+[04] 2026-10-20 21:10:05  GET /dashboard/summary  ->  HTTP 200  (1451 ms)
+     Dashboard summary
+     business={'name': 'Evergreen Traders', 'currency': 'USD'}  balance=65,000  threshold=20,000  receivables={'outstanding': 136071, 'overdue': 74943, 'customers_overdue': 4}  credit_score={'score': 839, 'band': 'Excellent'}
+     cash alert: {"date": "2026-10-27", "balance": 12416, "gap": 7584}
+     summary: Your balance is $65,000. Cash may fall $7,584 below your safety threshold on Tue, Oct 27. 4 customers owe $74,943 overdue; start with Summit Wholesale ($39,995). Your credit score is 839 (Excellent).
+[05] 2026-10-20 21:10:05  GET /cashflow/forecast?days=30  ->  HTTP 200  (333 ms)
+     30-day cash forecast
+     method=holt_winters  days=30  first_shortage={"date": "2026-10-27", "balance": 12416, "gap": 7584}
+     sample: {"date": "2026-10-21", "income": 22712, "expense": 23812, "expected_inflow": 0, "expected_outflow": 9217, "balance": 54682, "low": 44651, "high": 64713, "status": "ok"}
+[06] 2026-10-20 21:10:05  GET /action-plan  ->  HTTP 200  (381 ms)
+     Cash Advisor action plan
+     gap=142,129  expected_from_plan=170,671  gap_covered=True  steps=14
+       - {"id": 1, "rank": 1, "kind": "delay_payable", "title": "Ask City Packaging to move the 5,200 bill by 14 days", "target_ref": "bill:34", "cash_impact": 5200, "days_to_impact": 3, "risk": "medium", "reasoning": "
+       - {"id": 2, "rank": 2, "kind": "collect", "title": "Collect 74,943 from 4 customers this week", "target_ref": "collect:top", "cash_impact": 60705, "days_to_impact": 7, "risk": "low", "reasoning": "Summit Wholesal
+       - {"id": 3, "rank": 3, "kind": "delay_payable", "title": "Ask Northwind Distributors to move the 41,200 bill by 14 days", "target_ref": "bill:37", "cash_impact": 41200, "days_to_impact": 7, "risk": "medium", "rea
+       - {"id": 4, "rank": 4, "kind": "cut_expense", "title": "Bring Transport spending back to normal", "target_ref": "category:Transport", "cash_impact": 4307, "days_to_impact": 7, "risk": "low", "reasoning": "Transpo
+       - {"id": 5, "rank": 5, "kind": "cut_expense", "title": "Bring Miscellaneous spending back to normal", "target_ref": "category:Miscellaneous", "cash_impact": 4024, "days_to_impact": 7, "risk": "low", "reasoning": 
+[07] 2026-10-20 21:10:06  GET /recovery/priority  ->  HTTP 200  (156 ms)
+     Collection priority list
+     total_outstanding=136,071  total_overdue=74,943
+     customers ranked: 9
+       - {"customer_id": 2, "customer_name": "Summit Wholesale", "score": 89.0, "outstanding": 39995, "overdue_amount": 39995, "max_days_overdue": 46, "aging_bucket": "31-60", "p_pay_7d": 0.93, "action": "call", "action
+       - {"customer_id": 9, "customer_name": "Joy Bakery", "score": 80.1, "outstanding": 12523, "overdue_amount": 12523, "max_days_overdue": 31, "aging_bucket": "31-60", "p_pay_7d": 0.562, "action": "call", "action_labe
+       - {"customer_id": 7, "customer_name": "Parker & Sons", "score": 76.5, "outstanding": 7341, "overdue_amount": 7341, "max_days_overdue": 16, "aging_bucket": "0-30", "p_pay_7d": 0.865, "action": "send_reminder", "ac
+       - {"customer_id": 1, "customer_name": "Harbor Market", "score": 76.1, "outstanding": 15084, "overdue_amount": 15084, "max_days_overdue": 11, "aging_bucket": "0-30", "p_pay_7d": 0.671, "action": "send_reminder", "
+[08] 2026-10-20 21:10:07  POST /recovery/reminder/129  ->  HTTP 201  (1345 ms)
+     Draft a reminder (draft only, nothing is sent)
+     reminder status=draft  channel=whatsapp  tone=final
+     text: Final notice: Summit Wholesale, your balance of $21,689 to Evergreen Traders is 46 days overdue (due Sep 4, 2026). Kindly remit payment immediately or contact us today to arrange a payment plan.
+[09] 2026-10-20 21:10:07  GET /messaging/channels  ->  HTTP 200  (5 ms)
+     Messaging channels configured
+     {'email': True, 'whatsapp': False}  (a channel that is not connected is only recorded, never faked as delivered)
+[10] 2026-10-20 21:10:07  GET /credit-score  ->  HTTP 200  (258 ms)
+     Credit score with reasons
+     score=839  band=Excellent  factors=6  confidence={'level': 'high', 'months_used': 12, 'missing': []}
+       - Average monthly income: weight=0.2 value=1.0 points=60.0
+       - Income stability: weight=0.15 value=0.8 points=18.0
+       - Months with positive cash flow: weight=0.2 value=1.0 points=30.0
+       - Outstanding receivables: weight=0.15 value=0.857 points=14.2
+       - On-time repayment rate: weight=0.2 value=0.837 points=-7.6
+       - Business age: weight=0.1 value=0.822 points=25.3
+[11] 2026-10-20 21:10:07  GET /credit-score/plan  ->  HTTP 200  (126 ms)
+     How to raise the score
+     {"score": 839, "band": "Excellent", "next_band": null, "next_loan": null, "actions": [{"id": "collect:all", "title": "Collect every overdue invoice (4 customers)", "detail": "74,943 in total is past due.", "points": 7, "link": "/ledger", "kind": "action"}, {"id": "age", "title": "Keep trading: in 6 months your business age adds points", "detail": "Nothing to do, it counts on its own.", "points": 6, "link": "/credit-s
+[12] 2026-10-20 21:10:08  GET /loan/readiness  ->  HTTP 200  (389 ms)
+     Loan readiness
+     {"ready": true, "score": 839, "band": "Excellent", "safe_monthly_installment": 9791, "max_recommended_amount": 305700.0, "capacity": {"months_used": 12, "monthly_net_cash_flow": [47949, 45589, 72578, 104757, 64368, 165463, 46236, 50471, 61921, 96788, 79150, 13603], "ncf_p25": 47521, "alpha": 0.4, "existing_emi": 9217, "safe_emi": 9791}, "checklist": [{"item": "Collect receivables more than 30 days overdue", "done": f
+[13] 2026-10-20 21:10:08  GET /loan/recommendations  ->  HTTP 200  (124 ms)
+     Loan recommendations (8-type catalog)
+     catalog types=8
+       - SME Working Capital Line: min_score=650 status=eligible
+       - Seasonal Stock Loan: min_score=520 status=eligible
+       - Quick Trade Credit: min_score=550 status=eligible
+       - Small Business Booster: min_score=600 status=eligible
+       - Micro Enterprise Loan: min_score=500 status=eligible
+       - Retail Growth Loan: min_score=620 status=eligible
+       - SME Term Loan: min_score=700 status=eligible
+       - Shop Expansion Loan: min_score=580 status=eligible
+[14] 2026-10-20 21:10:08  POST /loan/what-if  ->  HTTP 200  (360 ms)
+     What-if: sales -10%
+     {"inputs": {"days": 30, "sales_change_pct": -10.0, "extra_monthly_expense": 0.0, "loan_amount": 0.0, "loan_rate": 12, "loan_tenure_months": 12, "new_monthly_installment": 0}, "base": {"series": [{"date": "2026-10-21", "balance": 54682}, {"date": "2026-10-22", 
+[15] 2026-10-20 21:10:08  GET /notifications/summary  ->  HTTP 200  (13 ms)
+     Notifications summary
+     unread=11 total=11
+       - [warning] Wheat Flour 2kg will run out in about 4 days at the recent selling rate.
+       - [warning] Sunflower Oil 1L will run out in about 5 days at the recent selling rate.
+       - [critical] Loan installment of $9,217 to Summit Bank was due Mon, Oct 19.
+       - [warning] Bill of $5,200 to City Packaging is due Fri, Oct 23.
+[16] 2026-10-20 21:10:11  POST /agent/chat  ->  HTTP 200  (2846 ms)
+     AI agent answers using the engines as tools
+     answer: Yes, the 7-day cash forecast shows a shortfall on 2026-10-27, with the balance dropping to $12,416—about $7,584 below your $20,000 safety threshold. This is the only shortage day in the next week. Overdue receivables (≈ $74,943) aren’t counted, so collecting them could close the gap.
+
+**Next step:** Draft a payment reminder for your highest-priority overdue customer to bring cash in sooner.
+     provider=groq  tools_used=['get_cash_forecast']  grounded=True  unverified_figures=[]
+[17] 2026-10-20 21:10:11  POST /auth/signup  ->  HTTP 201  (259 ms)
+     Create a throw-away second account
+[18] 2026-10-20 21:10:11  POST /onboarding  ->  HTTP 201  (21 ms)
+     Onboard the second business
+[19] 2026-10-20 21:10:11  GET /customers  ->  HTTP 200  (19 ms)
+     Demo owner's customer list (to get a real customer id)
+[20] 2026-10-20 21:10:11  GET /customers/2  ->  HTTP 404  (9 ms)
+     Second account tries to read the demo customer 2 (must be refused)
+     response: {'detail': 'Customer not found'}
+[21] 2026-10-20 21:10:11  GET /customers  ->  HTTP 200  (9 ms)
+     Second account's own customer list must not contain demo customers
+     customers visible to the second account: 0
+[22] 2026-10-20 21:10:11  GET /credit-score  ->  HTTP 200  (20 ms)
+     A brand-new business starts on the 14-day Pro trial and sees only its own (empty) data
+     response: score=382 band=Needs improvement confidence={'level': 'low', 'months_used': 1, 'missing': ['No income is recorded yet. Add your sales in Transactions (or import a CSV).', 'Add at least 3 months of sales and expenses. The score looks at up to 12 months.', 'Add your loans and supplier bills and mark them paid on time to build your repayment record.']}  (a starting point from no data, nothing from the demo business)
+[23] 2026-10-20 21:10:11  DELETE /settings/account  ->  HTTP 204  (30 ms)
+     Delete the throw-away account
+[24] 2026-10-20 21:10:11  GET /health  ->  HTTP 200  (2 ms)
+     Security headers on every response
+     x-content-type-options: nosniff
+     x-frame-options: DENY
+     referrer-policy: no-referrer
+     strict-transport-security: (added when served over HTTPS)
+     content-security-policy: default-src 'none'; frame-ancestors 'none'
+     cache-control: no-store
+====================================================================================================
+Finished 2026-10-20 21:10:11  |  24 requests

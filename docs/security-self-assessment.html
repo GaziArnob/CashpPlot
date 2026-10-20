@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CashPilot: Security Self-Assessment Report</title>
+<style>
+@page { size: A4; margin: 17mm 15mm 17mm; @bottom-center { content: "Security Self-Assessment  ·  Page " counter(page); font-size: 8.5pt; color: #777; } }
+body { font-family: "Segoe UI", Arial, sans-serif; color: #1c1b22; font-size: 9.8pt; line-height: 1.48; }
+h1 { font-size: 23pt; margin: 0 0 2px; color: #2f2f9e; }
+.meta { color: #666; font-size: 9.3pt; margin-bottom: 10px; }
+h2 { font-size: 13.5pt; color: #2f2f9e; border-bottom: 2px solid #d9d8f3; padding-bottom: 3px; margin: 18px 0 7px; page-break-after: avoid; }
+h3 { font-size: 11pt; color: #3b3bb0; margin: 12px 0 4px; page-break-after: avoid; }
+p { margin: 4px 0 7px; }
+table { border-collapse: collapse; width: 100%; margin: 5px 0 9px; font-size: 8.9pt; }
+tr { page-break-inside: avoid; }
+th, td { border: 1px solid #d6d4e0; padding: 4px 6px; text-align: left; vertical-align: top; }
+th { background: #eeedfb; color: #2f2f9e; }
+code { background: #f1f0f7; padding: 0 3px; border-radius: 3px; font-size: 8.5pt; }
+.y { color: #0f6e56; font-weight: 600; } .n { color: #a32d2d; font-weight: 600; } .p { color: #a86b00; font-weight: 600; }
+.note { background: #f6f5fc; border-left: 3px solid #5b5bd6; padding: 6px 10px; margin: 7px 0; font-size: 9.3pt; }
+ul { margin: 3px 0 7px 17px; padding: 0; } li { margin: 1px 0; }
+.pb { page-break-before: always; }
+</style></head><body>
+
+<h1>Security Self-Assessment Report</h1>
+<div class="meta">CashPilot: an AI financial assistant for small businesses · Oct 20, 2026 · @Arnob<br>Contents: (1) permission-tier implementation, (2) known-risk list, (3) verification evidence.</div>
+
+<div class="note"><b>Scope and method.</b> This is a self-assessment by the development team, based on reading the implementation, 264 automated tests, and a scripted sandbox run against the real API (see section 3). It is not an independent penetration test and makes no claim of certification. Items marked <span class="p">planned</span> are not built.</div>
+
+<h2>1. Permission-tier implementation</h2>
+<p>Access is decided in five layers. A request must pass all of them; each layer is a separate piece of code, so one mistake does not open everything.</p>
+<table>
+<tr><th style="width:4%">#</th><th style="width:20%">Layer</th><th>Implementation</th><th style="width:22%">Where</th></tr>
+<tr><td>1</td><td>Authentication</td><td>Bearer JWT (15-minute lifetime) checked on every protected route; refresh token rotates and can be revoked</td><td><code>deps.get_current_user</code></td></tr>
+<tr><td>2</td><td>Role</td><td>The user's role (<code>owner</code>, <code>staff</code>) is checked; owner-only routes return HTTP 403 for staff</td><td><code>deps.require_owner</code></td></tr>
+<tr><td>3</td><td>Plan</td><td>Premium features (11 of them, such as the Cash Advisor, credit score and AI agent) are checked against the business's plan; otherwise HTTP 402 with an "Upgrade to Pro" message</td><td><code>deps.needs</code>, <code>plans.py</code></td></tr>
+<tr><td>4</td><td>Business scoping and object ownership</td><td>Every query filters by the business of the signed-in user, never by an id from the request; any id in a URL is verified to belong to that business before it is read or changed</td><td><code>deps.get_business</code>, <code>deps.owned</code></td></tr>
+<tr><td>5</td><td>Database row-level security</td><td>PostgreSQL policies on every table with a <code>business_id</code>: a request only sees rows of its own business even if a query forgets the filter. Forced on the table owner too. A start-up warning fires if the database role would skip RLS</td><td>migration <code>0005</code>, <code>db.py</code></td></tr>
+</table>
+
+<h3>1.1 Who can do what</h3>
+<table>
+<tr><th>Tier</th><th>How it is identified</th><th>Allowed</th><th>Denied</th></tr>
+<tr><td><b>Anonymous</b></td><td>No token</td><td>Sign up, sign in, refresh, health check</td><td>Everything else (HTTP 401 "Not authenticated")</td></tr>
+<tr><td><b>Staff</b> (an owner's employee, up to 10 per business)</td><td>JWT with role <code>staff</code>, tied to the owner's business</td><td>Record and view transactions, invoices, bills and customers of that business</td><td>Cash Advisor, forecast and analysis pages, credit score and loans, reports, AI agent, bank, billing, referrals, settings, team and lender access (HTTP 403 "Only the business owner can do this"). The staff menu also hides these pages.</td></tr>
+<tr><td><b>Owner</b></td><td>JWT with role <code>owner</code></td><td>Everything inside their own business; Pro features while on a Pro plan or trial</td><td>Any other business's data (HTTP 404); Pro features on the Free plan after the trial</td></tr>
+<tr><td><b>Lender</b></td><td>Opaque token given by the owner, sent in <code>X-Lender-Token</code>; stored only as a SHA-256 hash</td><td>Read-only view of exactly the items the owner ticked (scope), until the expiry date</td><td>Anything not in scope, any write, any use after expiry or revocation ("Access token invalid, expired or revoked"). Every view is audited</td></tr>
+<tr><td><b>AI agent</b></td><td>Runs inside the owner's session</td><td>Seven read-only tools; at most 5 steps per question</td><td>Choosing a business (the id comes from the session), writing data, sending anything: actions need the owner's confirmation in the UI</td></tr>
+<tr><td><b>System jobs</b></td><td>Server-side only (daily job, seed, lender view)</td><td>An explicit database bypass flag to read across businesses for scheduled work</td><td>Never exposed to a request; request sessions always enforce RLS</td></tr>
+</table>
+
+<h3>1.2 Sensitive actions and their extra controls</h3>
+<table>
+<tr><th>Action</th><th>Control</th></tr>
+<tr><td>Send a reminder (WhatsApp, email)</td><td>Only when the owner presses Send. A channel that is not connected is recorded, never faked as delivered. A failed send keeps the draft and shows the provider's reason</td></tr>
+<tr><td>Request a lender introduction</td><td>Explicit consent tick; recorded and tracked; nothing is sent to any lender in this version</td></tr>
+<tr><td>Grant lender access</td><td>Owner only, scope and expiry required, token shown once, revocable, audited</td></tr>
+<tr><td>Delete account / export data</td><td>Owner only, audited; deletion removes staff and every record and cancels a subscription first</td></tr>
+<tr><td>Turn on two-factor, change plan, add or remove staff</td><td>Owner only, audited</td></tr>
+<tr><td>Bank connection</td><td>Owner only; the bank access token is stored encrypted and never sent to the browser</td></tr>
+<tr><td>Plan changes by payment</td><td>Only from a signed Stripe webhook, never from the browser (Stripe is off in this version; billing is demo mode)</td></tr>
+</table>
+
+<h3>1.3 Authentication details</h3>
+<ul>
+<li>Passwords: bcrypt, cost 12. The account locks for 15 minutes after 5 failed sign-ins. Rate limits on auth requests (10 per minute).</li>
+<li>Tokens: access JWT 15 minutes; refresh token 7 days, rotating, in an httpOnly, secure, SameSite=Strict cookie, and the refresh route also requires a custom header against CSRF.</li>
+<li>Optional second factor: authenticator-app code (TOTP). SMS codes are not used.</li>
+</ul>
+
+<h2 class="pb">2. Known-risk list</h2>
+<p>Severity is the team's own judgement of the impact for a financial product if the risk is exploited: High, Medium, Low.</p>
+<table>
+<tr><th style="width:5%">ID</th><th style="width:23%">Risk</th><th style="width:7%">Severity</th><th style="width:37%">What is in place now</th><th>Status / next step</th></tr>
+<tr><td>R1</td><td>No independent penetration test or audit</td><td>Medium</td><td>Self-review, 264 automated tests, sandbox run with isolation checks</td><td class="p">Planned: external review before real customer money or data</td></tr>
+<tr><td>R2</td><td>Rate limiter is in memory: it is per server process and resets on restart</td><td>Medium</td><td>Limits per client address and signed-in user; account lockout is stored in the database and is not affected</td><td class="p">Planned: Redis-backed limiter for several workers</td></tr>
+<tr><td>R3</td><td>The access token is kept in the browser's <code>sessionStorage</code>, so a cross-site scripting bug could read it</td><td>Medium</td><td>Short 15-minute lifetime; React escapes output; the API sends a strict content-security-policy; the long-lived refresh token is httpOnly and not readable by scripts</td><td class="p">Planned: a content-security-policy on the web client, and keeping the access token in memory only</td></tr>
+<tr><td>R4</td><td>JWTs are signed with one shared secret (HS256); if it leaked, tokens could be forged</td><td>Medium</td><td>Secret only in server environment variables, never in git or the client; refresh tokens are also checked against a stored id and can be revoked</td><td class="p">Planned: secret rotation procedure; asymmetric signing</td></tr>
+<tr><td>R5</td><td>Free-tier LLM providers may keep or review submitted text</td><td>Medium</td><td>Only minimal fields are sent; customer and supplier names are replaced by codes; owners can choose local-only or no AI; every AI figure is checked against the engines and replaced by a template if it does not match</td><td class="y">Mitigated; amounts and dates still reach the provider in cloud mode (documented to the owner)</td></tr>
+<tr><td>R6</td><td>The AI could still phrase an explanation badly or follow an injected instruction</td><td>Low</td><td>Read-only tools, business id from the session, step limit, tool results and receipt text treated as data, owner confirms any action</td><td class="y">Mitigated; residual wording risk accepted</td></tr>
+<tr><td>R7</td><td>Uploads are not scanned for malware</td><td>Low</td><td>Type and size limits (CSV 2 MB, JPEG/PNG/WebP 5 MB); files are processed in memory and not stored or served</td><td class="p">Planned: scanning if files are ever stored</td></tr>
+<tr><td>R8</td><td>No alerting on unusual sign-in locations or bulk data access</td><td>Medium</td><td>Audit log of sign-ins (including failures), exports, lender access, reminders, plan, staff and settings changes; lockout after 5 failures</td><td class="p">Planned: anomaly alerts</td></tr>
+<tr><td>R9</td><td>No self-service password reset or email verification for owners</td><td>Medium</td><td>Owners can reset staff passwords; strong hashing and lockout</td><td class="p">Planned: email verification and reset through a verified sender</td></tr>
+<tr><td>R10</td><td>Row-level security only works if the database role is not a superuser</td><td>Medium</td><td>Application-level business scoping still applies on every query; the API logs a warning at start-up if the role would skip RLS; tested on PostgreSQL</td><td class="y">Mitigated by the start-up check; deployment guide tells how to create a plain role</td></tr>
+<tr><td>R11</td><td>Free hosting: no uptime guarantee, a single instance, no dedicated web-application firewall</td><td>Low</td><td>Host-provided TLS and basic protections; health check; stateless API</td><td class="p">Accepted for the prototype</td></tr>
+<tr><td>R12</td><td>Several integrations run in sandbox or demo mode: bank import (Plaid sandbox), billing (demo), financing offers (demo data), lender introductions (recorded only)</td><td>Low</td><td>Clearly labelled in the interface; no real money moves; Stripe webhooks are signed and verified when enabled</td><td class="p">Planned: production integrations with their own review</td></tr>
+<tr><td>R13</td><td>Reminders sent from a free mailbox address can land in spam or be spoofed; WhatsApp business-initiated messages need an approved template</td><td>Low</td><td>The owner reviews and sends each message; failures are shown with the provider's reason; header injection in email subjects is blocked</td><td class="p">Planned: a verified sending domain</td></tr>
+<tr><td>R14</td><td>No defined backup, retention or disaster-recovery policy of our own</td><td>Medium</td><td>Relies on the database host; users can export or delete their data at any time</td><td class="p">Planned: documented retention and restore tests</td></tr>
+<tr><td>R15</td><td>The credit score and loan figures are estimates and could be mistaken for decisions</td><td>Low</td><td>Every score shows its reasons; loan output is labelled "Estimate only, not a loan approval"</td><td class="y">Mitigated by labelling</td></tr>
+<tr><td>R16</td><td>Local development defaults to SQLite, which has no row-level security</td><td>Low</td><td>Production runs PostgreSQL; RLS tests run against PostgreSQL</td><td class="y">Accepted; documented</td></tr>
+</table>
+
+<h2>3. Verification evidence</h2>
+<table>
+<tr><th style="width:28%">Evidence</th><th>What it shows</th></tr>
+<tr><td><code>docs/execution-evidence/automated-test-results.txt</code></td><td>Full verbose pytest output: 264 passed, 3 skipped (the skipped ones are the opt-in PostgreSQL row-level-security tests). Includes access control (<code>test_access.py</code>), lender access, 2FA, secret cleaning, messaging and notifications</td></tr>
+<tr><td><code>docs/execution-evidence/sandbox-run-log.txt</code></td><td>24 timestamped API calls with the demo account: wrong password refused (401), no token refused (401), a second throw-away account cannot read a demo customer (404) and sees none of the demo data, security headers present, reminders drafted but not sent, the AI answer is grounded in a tool result</td></tr>
+<tr><td><code>tests/test_rls_postgres.py</code></td><td>Row-level security checked against a real PostgreSQL database (set <code>RLS_TEST_URL</code>)</td></tr>
+<tr><td><code>docs/manual-test-cases.md</code></td><td>Manual test cases, including staff limits (H6, H7), lender access (H9 to H11), two-factor (H12, H13) and isolation (I1, I2)</td></tr>
+<tr><td>Demo video</td><td>The product running end to end</td></tr>
+</table>
+</body></html>
