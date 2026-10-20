@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CashPilot: demo script</title>
+<style>
+@page { size: A4; margin: 15mm 14mm; }
+body { font-family: "Segoe UI", Arial, sans-serif; color: #1f1d24; font-size: 10.6pt; line-height: 1.55; }
+h1 { font-size: 25pt; margin: 0; color: #3b3bb0; }
+.sub { color: #5c5a66; margin: 2px 0 12px; }
+h2 { font-size: 13pt; margin: 16px 0 6px; color: #3b3bb0; border-bottom: 1.5px solid #dcdaf3; padding-bottom: 3px; }
+.sec { border: 1px solid #d6d4e6; border-radius: 6px; margin: 0 0 11px; page-break-inside: avoid; }
+.sec h3 { margin: 0; font-size: 11.5pt; color: #fff; background: #4b4bc8; padding: 5px 10px; border-radius: 5px 5px 0 0; display: flex; justify-content: space-between; }
+.sec h3 span { font-weight: 400; font-size: 9.5pt; }
+.in { padding: 7px 12px 8px; }
+.click { background: #f1f0fb; border-left: 4px solid #5b5bd6; padding: 5px 10px; margin: 0 0 7px; font-size: 9.8pt; }
+.click b { color: #3b3bb0; }
+.say { margin: 0; }
+.say::before { content: "SAY  "; font-weight: 700; color: #0f6e56; font-size: 9pt; letter-spacing: .5px; }
+.tip { background: #fdf6e3; border-left: 4px solid #ba7517; padding: 5px 10px; margin: 7px 0 0; font-size: 9.6pt; }
+table { border-collapse: collapse; width: 100%; font-size: 10pt; margin: 6px 0; }
+th, td { border: 1px solid #d6d4e0; padding: 5px 8px; text-align: left; vertical-align: top; }
+th { background: #eeedfb; }
+ul { margin: 4px 0 4px 18px; padding: 0; }
+code { background: #f1f0f7; padding: 0 4px; border-radius: 3px; font-size: 9.4pt; }
+.pb { page-break-before: always; }
+</style></head><body>
+
+<h1>CashPilot: demo script</h1>
+<div class="sub">What to say, what to click, and where to go. About 9 minutes in full, 5 minutes if you skip the sections marked optional.</div>
+
+<h2>Before you start (5 minutes of preparation)</h2>
+<table>
+<tr><th style="width:23%">Item</th><th>What to do</th></tr>
+<tr><td>Which site</td><td><b>Best: run it on your laptop</b> (backend and frontend running, <code>python -m seed.seed</code> done). The demo account <code>demo@example.com</code> / <code>Demo@12345</code> has a full year of data, so every screen is full. The live site starts empty: create an account, then on the Transactions page use <b>Import CSV</b> with the sample file from <code>docs/manual-test-cases.md</code>, and the screens fill in.</td></tr>
+<tr><td>Wake the live API</td><td>The free host sleeps. Open the site 2 minutes before you begin and sign in once, so the first request is not slow.</td></tr>
+<tr><td>Numbers</td><td>The demo data is built relative to today, so amounts and dates on your screen can differ from the ones in this script. <b>Read the numbers off the screen</b>; the script uses words like "about" for that reason.</td></tr>
+<tr><td>Browser</td><td>Full screen, zoom 100% to 110%, notifications off, one tab. Sign out first so the demo starts on the landing page.</td></tr>
+<tr><td>Do not send</td><td>Never press Send on a real customer. Use <b>Draft</b> and show the message. If you want to show delivery, send to your own email or number.</td></tr>
+</table>
+
+<h2>The script</h2>
+
+<div class="sec"><h3>1. Opening: the problem <span>0:30 · Landing page</span></h3><div class="in">
+<div class="click"><b>Screen:</b> the home page (<code>/</code>), hero text visible. No click yet.</div>
+<p class="say">Good morning, everyone. Small businesses are over 90% of firms and about 70% of jobs, yet the World Bank estimates a 5.7 trillion dollar credit gap for them. Most of them are not unprofitable. They are profitable on paper and broke on payday: customers pay late, a big supplier bill lands on the wrong day, and nobody warned the owner. CashPilot is an AI financial assistant that tells the owner about a cash shortage 7 to 30 days before it happens, shows who to chase and what to do, and explains what the business can safely borrow.</p>
+</div></div>
+
+<div class="sec"><h3>2. Sign in and the Dashboard <span>1:00</span></h3><div class="in">
+<div class="click"><b>Click:</b> <b>Sign in</b> (top right) → enter the demo email and password → <b>Sign in</b>. You land on <b>Dashboard</b>.</div>
+<p class="say">This is a wholesale grocery business with one year of records. Everything on this screen is calculated from the owner's own data. The red banner at the top is the key: a cash shortage is coming in about a week, and it tells the exact day and how much we fall short. Below are cash balance, net this month, overdue receivables and the credit score. The summary sentence is written by AI, but every number in it comes from our calculation engines, and any figure the AI invents is rejected automatically. The chart shows the next 14 days, and the list on the right says who to collect from first.</p>
+<div class="click"><b>Point at:</b> red banner → four number cards → chart with the dotted safety line → "Collect first" list.</div>
+</div></div>
+
+<div class="sec"><h3>3. Cash Advisor: the plan <span>1:00</span></h3><div class="in">
+<div class="click"><b>Click:</b> <b>See the plan</b> on the red banner (or sidebar <b>Cash Advisor</b>).</div>
+<p class="say">Knowing about a problem is not enough, so the Advisor builds a plan. It prefers the cheapest and safest steps first: collect overdue money, clear slow stock, ask a supplier to delay a bill, cut spending. Every step shows how much cash it brings, how soon, and the risk, and we simulate each step in the forecast to make sure it really closes the gap. Nothing happens by itself. The owner approves each step.</p>
+<div class="click"><b>Click:</b> open one step → <b>Mark done</b> (or <b>Dismiss</b>) to show the owner stays in control. Point at the progress bar showing how much of the gap is covered.</div>
+</div></div>
+
+<div class="sec"><h3>4. Collections and a reminder <span>1:00 · Ledger</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>Ledger</b> → tab <b>They owe me</b>. Find an overdue invoice → <b>Draft reminder</b> (or <b>Draft</b>).</div>
+<p class="say">The Ledger lists who owes us. Each customer gets a collection priority score from amount owed, how late, payment history and how much the money matters to our forecast. For an overdue customer I press Draft, and CashPilot writes a reminder with the customer's name, the amount, and a tone that fits how late they are, friendly, firm or final.</p>
+<div class="click"><b>Then:</b> show the channel dropdown (<b>WhatsApp</b> / <b>Email</b>), edit one word in the text. <b>Do not press Send</b> on a real customer, close the dialog.</div>
+<p class="say">The owner can edit it and chooses WhatsApp or email. It only goes out when the owner presses Send, and if the channel is not connected, CashPilot says so honestly instead of pretending it was sent.</p>
+<div class="click"><b>Optional:</b> sidebar <b>Customers</b> → click a customer to show the invoice history and risk level, then the pencil icon to show editing a phone number.</div>
+</div></div>
+
+<div class="sec"><h3>5. Supplier payment plans <span>0:45 · optional</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>Supplier Plans</b> → on the large bill click <b>Plan</b> → look at the schedule → <b>Approve this plan</b> is available but optional.</div>
+<p class="say">The shortage comes from one big supplier bill. CashPilot proposes paying it in instalments, shows the new cash curve, compares financing options, and drafts the message to the supplier. Supplier and customer names are replaced by codes before any AI sees them, and the financing offers on screen are demo data, not live lenders.</p>
+</div></div>
+
+<div class="sec"><h3>6. Products <span>0:30 · optional</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>Products</b>. Point at the quadrant chart and the stars / slow / dead stock labels.</div>
+<p class="say">For a shop owner, cash is stuck in stock. This view classifies each product as a star, a cash cow, slow-moving or dead stock, using margin, how fast it sells and how fast the money comes back, so the owner knows what to push and what to clear.</p>
+</div></div>
+
+<div class="sec"><h3>7. Credit score <span>0:45</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>Credit Score</b>. Scroll to the factor list, then to <b>How to raise your score</b>.</div>
+<p class="say">Small businesses often have no formal credit history. We build a 300 to 900 score from their own records: six weighted factors such as income, repayment record and cash stability. Every point is explained, so the owner sees why. The planner below shows the exact steps that raise it, for example collecting a specific overdue invoice is worth a stated number of points. We calculate that by re-running the real formula, not by guessing.</p>
+</div></div>
+
+<div class="sec"><h3>8. Loan Center <span>0:45</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>Loan Center</b>. Point at readiness, safe monthly instalment, and the loan types. Click <b>Request intro</b> on one offer, show the consent box (do not save), then close. Show <b>My loans</b>.</div>
+<p class="say">Here the owner sees how much they can safely borrow. There are eight loan types, and the better the score, the cheaper the loans that open up. If the owner wants an introduction, they must tick a consent box first. Nothing is sent to any lender in this version, the request is recorded and tracked, and real lender integration is on our roadmap.</p>
+</div></div>
+
+<div class="sec"><h3>9. Notifications <span>0:20</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>Notifications</b> (the red count next to it). Click <b>Open</b> on one alert, then come back, then <b>Mark all read</b>.</div>
+<p class="say">Sixteen kinds of alert watch the business for the owner: shortages, late invoices, bills and loan instalments coming due, low stock, spending spikes, and more. Each one links straight to the page that fixes it, and the owner chooses which to receive in Settings.</p>
+</div></div>
+
+<div class="sec"><h3>10. AI Agent <span>0:45</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>AI Agent</b> → click one of the suggested questions, or type: <code>Will I run short on cash next week?</code> → wait for the answer.</div>
+<p class="say">The owner can also just ask in plain language. The agent calls our calculation tools and answers with the business's own numbers, never made-up ones. If no AI service is reachable, it falls back to template answers, so it never fails in front of a customer.</p>
+</div></div>
+
+<div class="sec"><h3>11. Adding data fast <span>0:30 · optional</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>Transactions</b> → point at <b>Import CSV</b> and <b>Scan receipt</b> (upload a receipt photo only if you have one ready) → mention <b>Connect a bank</b>.</div>
+<p class="say">Getting data in has to be easy. The owner can import a spreadsheet, scan a receipt, type a record, or connect a bank. The receipt scan only suggests values, and the owner confirms before anything is saved.</p>
+</div></div>
+
+<div class="sec"><h3>12. Trust and security <span>0:30</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>Settings</b> → scroll: AI privacy, Team, Lender access, Two-factor authentication, Download my data.</div>
+<p class="say">Because this is financial data, we built the safeguards in: two-factor sign-in, staff accounts that only see transactions, ledger and customers, lender access links that expire and can be revoked, encrypted contact details, PostgreSQL row-level security so one business can never read another's rows, and the owner can choose cloud AI, local-only or no AI at all. They can download everything or delete their account.</p>
+</div></div>
+
+<div class="sec"><h3>13. Closing <span>0:30</span></h3><div class="in">
+<div class="click"><b>Click:</b> sidebar <b>Dashboard</b> (or sign out to show the home page again).</div>
+<p class="say">To sum up: CashPilot warns before cash runs out, shows who to chase and what to do, explains the credit score, and always keeps the owner in control, with every number traceable to a tested calculation. It is built on free tiers, and runs on Vercel, Render and Neon. What is built today is everything you saw. What comes next is real lender integrations, live payments for the Pro plan and production bank connections. Thank you, I am happy to take questions.</p>
+</div></div>
+
+<h2 class="pb">If you have only 5 minutes</h2>
+<p>Do sections <b>1, 2, 3, 4, 7, 8, 10, 13</b> and skip 5, 6, 9, 11 and 12 (mention security in one sentence in the closing).</p>
+
+<h2>Questions you may be asked</h2>
+<table>
+<tr><th style="width:32%">Question</th><th>Short, honest answer</th></tr>
+<tr><td>Is the AI making up the numbers?</td><td>No. Every figure comes from deterministic, tested engines. The AI only explains, and any number it adds that the engines did not produce is rejected.</td></tr>
+<tr><td>Does it really send messages?</td><td>Only when the owner presses Send, through Mailjet for email and WhatsApp through a connected provider. If a channel is not connected it says so and only records it.</td></tr>
+<tr><td>Is the credit score official?</td><td>No. It is an explainable estimate from the business's own records, not a bureau score, and loan figures are not an approval.</td></tr>
+<tr><td>Are the lenders real?</td><td>Not yet. Financing offers are demo data and introduction requests are only recorded. Real lender integration is on the roadmap.</td></tr>
+<tr><td>Does it take payments?</td><td>Billing is in demo mode (no payment is taken). Stripe code exists but is switched off.</td></tr>
+<tr><td>Is the bank connection real?</td><td>It uses Plaid's sandbox with sample banks only.</td></tr>
+<tr><td>How is the data protected?</td><td>Hashed passwords, rotating tokens, optional two-factor, encrypted contact fields, row-level security in the database, audit log, rate limits, export and deletion.</td></tr>
+<tr><td>What does it cost to run?</td><td>It runs on free tiers: Vercel, Render and Neon, with free AI tiers.</td></tr>
+<tr><td>Which currencies?</td><td>Any. USD, EUR, GBP, RMB (CNY), INR and others are built in, and Settings accepts any ISO code.</td></tr>
+</table>
+
+<h2>If something goes wrong</h2>
+<ul>
+<li><b>A page loads slowly (live site):</b> the free host was asleep. Say "free hosting wakes up on the first request", wait about 50 seconds.</li>
+<li><b>"Can't reach the backend":</b> check the API address is awake (open its <code>/health</code> page). On the laptop, make sure uvicorn is running.</li>
+<li><b>A page says "Upgrade to Pro":</b> the account is on the Free plan. In Settings choose Pro (demo billing, no payment).</li>
+<li><b>The reminder says "Recorded as sent, CashPilot did not deliver it":</b> that is the honest message when no provider is connected. Say so, it is a feature.</li>
+<li><b>The AI answer is a template:</b> no AI key is reachable. Say "this is the offline fallback", it still uses the real numbers.</li>
+</ul>
+</body></html>
