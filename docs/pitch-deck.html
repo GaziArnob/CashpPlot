@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CashPilot: pitch deck</title>
+<style>
+@page { size: 13.333in 7.5in; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: "Segoe UI", Arial, sans-serif; color: #ecebef; background: #111113; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.s { width: 13.333in; height: 7.5in; padding: 0.55in 0.75in 0.5in; position: relative; overflow: hidden; page-break-after: always;
+  background: radial-gradient(900px 520px at 88% -8%, rgba(91,91,214,.42), transparent 62%), radial-gradient(760px 460px at -6% 108%, rgba(139,114,224,.30), transparent 62%), #111113; display: flex; flex-direction: column; }
+.s:last-child { page-break-after: auto; }
+.tag { font-size: 11pt; letter-spacing: 2px; text-transform: uppercase; color: #b1a9ff; font-weight: 600; margin-bottom: 6px; }
+h1 { font-size: 40pt; line-height: 1.08; margin: 0; letter-spacing: -.5px; background: linear-gradient(120deg,#ecebef 15%,#b1a9ff 62%,#8b72e0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+h2 { font-size: 28pt; line-height: 1.12; margin: 0 0 6px; letter-spacing: -.3px; background: linear-gradient(120deg,#ecebef 20%,#b1a9ff 70%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lead { font-size: 14.5pt; color: #b4b1bb; margin: 4px 0 16px; max-width: 11in; line-height: 1.4; }
+.grid { display: grid; gap: 14px; flex: 1; align-content: start; }
+.g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: 1fr 1fr 1fr; } .g4 { grid-template-columns: repeat(4, 1fr); }
+.c { background: rgba(33,31,36,.78); border: 1px solid #3e3b44; border-radius: 14px; padding: 15px 18px; }
+.c h3 { margin: 0 0 5px; font-size: 14.5pt; color: #b1a9ff; }
+.c p, .c li { margin: 0; font-size: 12pt; line-height: 1.42; color: #d8d6de; }
+.c ul { margin: 0; padding-left: 18px; }
+.num { font-size: 30pt; font-weight: 700; color: #8b72e0; line-height: 1; }
+.big { font-size: 46pt; font-weight: 700; color: #b1a9ff; line-height: 1; }
+.foot { position: absolute; bottom: 0.25in; left: 0.75in; right: 0.75in; display: flex; justify-content: space-between; font-size: 9.5pt; color: #6e6b76; }
+.fill { border: 2px dashed #e5b450; background: rgba(229,180,80,.10); color: #f0cd82; border-radius: 12px; padding: 12px 16px; font-size: 12pt; }
+.good { color: #4cc38a; } .warn { color: #e5b450; }
+.pill { display: inline-block; border: 1px solid #5b5bd6; background: rgba(91,91,214,.2); color: #cfc9ff; border-radius: 999px; padding: 3px 12px; font-size: 11pt; margin: 3px 5px 3px 0; }
+.logo { display: flex; align-items: center; gap: 10px; font-size: 18pt; font-weight: 700; }
+.logo i { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg,#5b5bd6,#8b72e0); display: inline-block; }
+table { border-collapse: collapse; width: 100%; font-size: 12pt; }
+th, td { border-bottom: 1px solid #3e3b44; padding: 7px 10px; text-align: left; color: #d8d6de; }
+th { color: #b1a9ff; }
+.q { font-size: 21pt; color: #ecebef; line-height: 1.35; }
+</style></head><body>
+
+<!-- 1 -->
+<div class="s" style="justify-content:center">
+  <div class="logo"><i></i> CashPilot</div>
+  <h1 style="font-size:58pt;margin-top:26px">Profitable on paper.<br>Broke on payday.</h1>
+  <p class="lead" style="font-size:18pt;margin-top:18px">An AI financial assistant that warns small and medium business owners about cash shortages <b style="color:#ecebef">7 to 30 days</b> before they happen, shows who to chase and what to do, and explains what they can safely borrow.</p>
+  <div style="margin-top:10px"><span class="pill">Cash flow forecast</span><span class="pill">Payment recovery</span><span class="pill">Explainable credit score</span><span class="pill">Loan readiness</span><span class="pill">AI agent</span></div>
+  <p style="margin-top:22px;font-size:13pt;color:#b4b1bb">Live product: <b style="color:#ecebef">cashpilot-ai-demo.vercel.app</b></p>
+  <div class="foot"><span>2026 Shenzhen International FinTech Competition · International Track</span><span></span></div>
+</div>
+
+<!-- 2 -->
+<div class="s">
+  <div class="tag">Elevator pitch</div>
+  <h2>One assistant that tells an owner what will happen to their cash, who to chase, and what they can safely borrow.</h2>
+  <div class="grid g4" style="margin-top:16px">
+    <div class="c"><h3>Predict shortages</h3><p>Daily balance for the next 7 to 30 days, the first day cash falls below a safety level, and the gap amount.</p></div>
+    <div class="c"><h3>Collect smarter</h3><p>Ranks customers by who to contact first and drafts the reminder in the right tone.</p></div>
+    <div class="c"><h3>Explainable credit score</h3><p>A 300 to 900 score from the business's own records, with every point explained.</p></div>
+    <div class="c"><h3>Safe loan estimate</h3><p>How much the business can repay safely, and which loan types its score opens.</p></div>
+  </div>
+  <p class="lead" style="margin-top:18px">Plus an AI agent: owners ask in plain language and it answers by calling the calculation engines as tools, never by guessing.</p>
+  <div class="foot"><span>CashPilot</span><span>2</span></div>
+</div>
+
+<!-- 3 -->
+<div class="s">
+  <div class="tag">Problem</div>
+  <h2>Profitable businesses still run out of cash, and credit does not reach them.</h2>
+  <div class="grid g4" style="margin-top:12px;flex:none">
+    <div class="c"><div class="big">90%</div><p>of firms worldwide are small businesses, with about 70% of employment.</p></div>
+    <div class="c"><div class="big">40%</div><p>of formal MSMEs in emerging economies are credit-constrained.</p></div>
+    <div class="c"><div class="big">$5.7T</div><p>MSME financing gap.</p></div>
+    <div class="c"><p style="font-size:10.5pt;color:#908d98">Source: IFC / World Bank, March 2025. See docs/project-need-sources.md.</p></div>
+  </div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="c"><h3>Cash gaps arrive as a surprise</h3><p>Owners see today's balance, not next week's shortage. Bills fall due before customers pay.</p></div>
+    <div class="c"><h3>Credit feels like a black box</h3><p>With no clear, explainable score, owners cannot see what holds them back from finance.</p></div>
+    <div class="c"><h3>Borrowing is guesswork</h3><p>Owners do not know how much they can repay safely and risk over-borrowing.</p></div>
+    <div class="c"><h3>Money stuck in unpaid dues</h3><p>Owners do not know who to chase first or how to word the reminder.</p></div>
+  </div>
+  <p class="lead" style="margin:10px 0 0">Generic AI chatbots can hallucinate financial numbers. Money decisions need numbers that can be audited.</p>
+  <div class="foot"><span>CashPilot</span><span>3</span></div>
+</div>
+
+<!-- 4 -->
+<div class="s">
+  <div class="tag">Solution</div>
+  <h2>One web app, built for owners who are not finance experts.</h2>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="c"><h3>1. Cash flow forecast</h3><p>Projects the daily balance 7 to 30 days ahead, flags shortage days, and a what-if simulator tests a loan, a sales change or a new expense.</p></div>
+    <div class="c"><h3>2. Cash Advisor</h3><p>Turns the gap into an ordered action plan: collect, clear stock, delay a bill, cut spending. Each step shows its cash effect and risk.</p></div>
+    <div class="c"><h3>3. Smart payment recovery</h3><p>Ranks customers by priority, sets credit limits, and drafts reminders for WhatsApp or email. Sent only after the owner approves.</p></div>
+    <div class="c"><h3>4. Supplier payment plans</h3><p>Proposes instalments for a big bill, compares financing, and drafts the message to the supplier.</p></div>
+    <div class="c"><h3>5. Credit score and loans</h3><p>Explainable 300 to 900 score, a planner for raising it, readiness checklist, 8 loan types tied to the score, consent-based lender introductions.</p></div>
+    <div class="c"><h3>6. AI financial agent</h3><p>Ask in plain language. The agent calls the engines and explains the result. Product insights, reports and alerts complete the picture.</p></div>
+  </div>
+  <div class="foot"><span>CashPilot</span><span>4</span></div>
+</div>
+
+<!-- 5 -->
+<div class="s">
+  <div class="tag">How it works</div>
+  <h2>From records to a decision in three steps.</h2>
+  <div class="grid g3" style="margin-top:18px">
+    <div class="c"><div class="num">1</div><h3 style="margin-top:8px">Add your records</h3><p>Three-question setup, then import a CSV, scan a receipt, type a record, or connect a bank (Plaid sandbox today).</p></div>
+    <div class="c"><div class="num">2</div><h3 style="margin-top:8px">See what is coming</h3><p>A dated forecast, ranked collections, an action plan, 16 kinds of alerts and a score with reasons.</p></div>
+    <div class="c"><div class="num">3</div><h3 style="margin-top:8px">Decide with confidence</h3><p>The owner approves every step. Nothing is paid, sent or applied for without the owner pressing the button.</p></div>
+  </div>
+  <p class="lead" style="margin-top:20px">Owners can get their first cash forecast without learning finance: guided onboarding, one-click import and plain-language chat.</p>
+  <div class="foot"><span>CashPilot</span><span>5</span></div>
+</div>
+
+<!-- 6 -->
+<div class="s">
+  <div class="tag">Differentiation</div>
+  <h2>The engines calculate. That is what makes the answers trustworthy.</h2>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="c"><h3>Deterministic core, AI interface</h3><p>Every number comes from tested engines. The language model never calculates, and any figure it adds that the engines did not produce is rejected.</p></div>
+    <div class="c"><h3>Explainable by design</h3><p>Each credit score shows the factors behind it, and a planner re-runs the real formula to show how many points each action earns.</p></div>
+    <div class="c"><h3>Privacy first</h3><p>Customer and supplier names are replaced by codes before any hosted model sees them. Owners can choose cloud, local-only or no AI.</p></div>
+    <div class="c"><h3>Consent-based lender access</h3><p>Lenders see only what the owner shares, through scoped, expiring, revocable links. Every view is logged.</p></div>
+    <div class="c"><h3>Safe agent</h3><p>Read-only tools, the business taken from the session, a limit on tool steps, and the owner confirms any action.</p></div>
+    <div class="c"><h3>Zero paid AI services</h3><p>Free-tier Gemini and Groq with automatic fallback, local models for offline use, free open-source OCR, and free-tier hosting.</p></div>
+  </div>
+  <div class="foot"><span>CashPilot</span><span>6</span></div>
+</div>
+
+<!-- 7 -->
+<div class="s">
+  <div class="tag">Credit and lending</div>
+  <h2>Explainable credit for businesses with no credit history.</h2>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="c"><h3>Score built from the business's own records</h3><ul><li>300 to 900 from six weighted factors, such as income, cash stability and repayment record</li><li>Every point traced to a reason, for example "overdue receivables lowered your score by 38 points"</li><li>New accounts see exactly which data to add, never an unexplained low score</li></ul></div>
+    <div class="c"><h3>A path to a better score and cheaper loans</h3><ul><li>"How to raise your score": each step shows the points it earns</li><li>8 loan types, with better scores opening cheaper loans</li><li>Safe monthly instalment and readiness checklist, an estimate and not an approval</li><li>Introduction requests need the owner's consent and are tracked to funded</li></ul></div>
+  </div>
+  <div class="foot"><span>CashPilot</span><span>7</span></div>
+</div>
+
+<!-- 8 -->
+<div class="s">
+  <div class="tag">Trust and security (built)</div>
+  <h2>Financial data deserves real safeguards.</h2>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="c"><h3>Accounts</h3><p>Hashed passwords, short-lived tokens with rotating refresh cookies, optional authenticator-app two-factor sign-in, rate limits.</p></div>
+    <div class="c"><h3>Data isolation</h3><p>Per-business checks on every query, plus PostgreSQL row-level security so one business can never read another's rows.</p></div>
+    <div class="c"><h3>Privacy</h3><p>Encrypted contact fields, names masked before AI, audit log, data export and full account deletion.</p></div>
+    <div class="c"><h3>Roles</h3><p>Staff logins see only transactions, ledger and customers. Only the owner manages settings.</p></div>
+    <div class="c"><h3>Lender access</h3><p>Expiring, revocable, scoped tokens shown once. Consent recorded.</p></div>
+    <div class="c"><h3>Quality</h3><p>More than 260 automated tests cover the engines, the API and the delivery layer.</p></div>
+  </div>
+  <p class="lead" style="margin:12px 0 0;font-size:11.5pt">We do not claim certifications or penetration tests.</p>
+  <div class="foot"><span>CashPilot</span><span>8</span></div>
+</div>
+
+<!-- 9 -->
+<div class="s">
+  <div class="tag">Market and customers</div>
+  <h2>Built for the owners of small businesses, and the lenders who serve them.</h2>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="c"><h3>Primary: SME owners</h3><p>Owners who manage cash, invoices, bills and loans themselves, often without a finance team.</p></div>
+    <div class="c"><h3>Staff users</h3><p>Team members with access to transactions, the ledger and customers only.</p></div>
+    <div class="c"><h3>Partners: lenders</h3><p>Read-only, consent-scoped access to a business's score and reports, for better lending decisions.</p></div>
+  </div>
+  <div class="c" style="margin-top:14px"><h3>Customer segments</h3><p>Shops and traders that sell on credit · Service businesses with invoices and recurring bills · Businesses that already keep records in spreadsheets or a bank account. English interface, any currency (USD, EUR, GBP, RMB, INR and more).</p></div>
+  <div class="foot"><span>CashPilot</span><span>9</span></div>
+</div>
+
+<!-- 10 -->
+<div class="s">
+  <div class="tag">Business model (proposed)</div>
+  <h2>Value for the owner first. Revenue from owners and lenders. Costs near zero.</h2>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="c"><h3>SME subscription (freemium)</h3><p><b>Free:</b> transactions, customers, invoices, dashboard, 7-day forecast, alerts.<br><b>Pro, 14-day trial:</b> 30-day forecast, Cash Advisor, recovery, supplier plans, credit score, loan center, reports, AI agent.</p></div>
+    <div class="c"><h3>Lender partnerships (planned)</h3><p>Loan products matched by score and amount. Lenders would pay a referral or qualified-lead fee for ready, consented borrowers.</p></div>
+    <div class="c"><h3>Low cost base</h3><p>Free LLM tiers, open-source OCR and free-tier hosting keep early costs very low.</p></div>
+  </div>
+  <p class="lead" style="margin-top:14px;font-size:12pt">Billing runs in demo mode today: plans switch without taking payment. Pricing is to be set with pilot customers.</p>
+  <div class="foot"><span>CashPilot</span><span>10</span></div>
+</div>
+
+<!-- 11 -->
+<div class="s">
+  <div class="tag">Go to market</div>
+  <h2>Start with a small pilot, prove value with real cash alerts, then bring in lenders.</h2>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="c"><h3>Phase 1: pilot SMEs</h3><p>Onboard a small group. CSV import, receipt scan and bank import make setup quick.</p></div>
+    <div class="c"><h3>Phase 2: lender partners</h3><p>Sign lenders who list products in the Loan Center and receive consented, ready borrowers.</p></div>
+    <div class="c"><h3>Phase 3: scale</h3><p>Grow through the website, owner referrals, and partners such as accountants and business groups.</p></div>
+  </div>
+  <p class="lead" style="margin-top:16px">Why onboarding is easy: a three-question setup, one-click import, and plain-language chat.</p>
+  <div class="foot"><span>CashPilot</span><span>11</span></div>
+</div>
+
+<!-- 12 -->
+<div class="s">
+  <div class="tag">Traction and status</div>
+  <h2>A working, deployed product.</h2>
+  <div class="grid g3" style="margin-top:14px;flex:none">
+    <div class="c"><div class="big">20</div><p>features built across cash, collections, suppliers, credit, loans, reports, alerts and the agent</p></div>
+    <div class="c"><div class="big">260+</div><p>automated tests</p></div>
+    <div class="c"><div class="big">Live</div><p>on Vercel, Render and Neon free tiers: <b>cashpilot-ai-demo.vercel.app</b></p></div>
+  </div>
+  <div class="c" style="margin-top:14px"><h3>Built and working</h3><p>Forecast and what-if · Cash Advisor · collections and reminders · supplier plans · products · credit score and planner · loan center · reports and goals · AI agent · notifications · staff, 2FA and lender access · CSV, receipt scan and bank import (sandbox).</p></div>
+  <div class="fill" style="margin-top:14px"><b>[Fill in with real numbers only:]</b> pilot users, businesses onboarded, forecasts generated, lender conversations, waitlist size. Delete this box if there are none yet.</div>
+  <div class="foot"><span>CashPilot</span><span>12</span></div>
+</div>
+
+<!-- 13 -->
+<div class="s">
+  <div class="tag">Roadmap</div>
+  <h2>What is built today, and what comes next.</h2>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="c"><h3 class="good">Built today</h3><ul><li>Forecast, advisor, recovery, credit, loan, what-if engines</li><li>Supplier payment plans and drafted messages</li><li>CSV import, receipt scan, reports, AI agent</li><li>Staff logins, plans, two-factor, lender consent</li><li>PostgreSQL with row-level security, hosted deployment</li></ul></div>
+    <div class="c"><h3 class="warn">Next (not built yet)</h3><ul><li>Real lender integrations and a live loan marketplace</li><li>Live payments for the Pro plan</li><li>Production bank connections (sandbox only today)</li><li>Mobile-wallet import and local banking APIs</li><li>Verified-domain email and approved WhatsApp templates</li></ul></div>
+  </div>
+  <p class="lead" style="margin-top:12px;font-size:12pt">Financing offers on screen and billing are demo mode today.</p>
+  <div class="foot"><span>CashPilot</span><span>13</span></div>
+</div>
+
+<!-- 14 -->
+<div class="s">
+  <div class="tag">Team</div>
+  <h2>The people building a trustworthy financial assistant for small businesses.</h2>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="c"><h3>Arnob</h3><p>[Role]. Architecture, engines and security. <span class="warn">[Add relevant experience.]</span></p></div>
+    <div class="fill"><b>[Team member 2]</b><br>[Role, finance / lending / SME experience]</div>
+    <div class="fill"><b>[Team member 3]</b><br>[Role, product / design / business development]</div>
+  </div>
+  <div class="fill" style="margin-top:14px">[Add names, photos, roles, university and key achievements. An advisor from banking or lending would strengthen this slide. These details can only come from you.]</div>
+  <div class="foot"><span>CashPilot</span><span>14</span></div>
+</div>
+
+<!-- 15 -->
+<div class="s">
+  <div class="tag">The ask</div>
+  <h2>What we want to do next.</h2>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="c"><h3>Pilot customers</h3><p>Onboard the first pilot businesses and measure real forecast accuracy and recovered cash.</p></div>
+    <div class="c"><h3>Lender and bank integrations</h3><p>Connect real lenders, local banking and mobile-wallet APIs.</p></div>
+    <div class="c"><h3>Compliance</h3><p>Independent security review and lender compliance audits.</p></div>
+  </div>
+  <div class="fill" style="margin-top:14px">[Optional, only if you have them: funding amount, pricing basis, margin estimate and its assumptions. Do not show a margin figure without a basis.]</div>
+  <div class="foot"><span>CashPilot</span><span>15</span></div>
+</div>
+
+<!-- 16 -->
+<div class="s" style="justify-content:center">
+  <div class="tag">Closing and vision</div>
+  <div class="q" style="font-size:36pt;line-height:1.2;background:linear-gradient(120deg,#ecebef 20%,#b1a9ff 70%);-webkit-background-clip:text;background-clip:text;color:transparent;max-width:11in">Every small business deserves a financial advisor it can trust.</div>
+  <p class="lead" style="margin-top:26px;font-size:16pt">Thank you</p>
+  <table style="max-width:8in;margin-top:6px">
+    <tr><th>Live product</th><td>https://cashpilot-ai-demo.vercel.app</td></tr>
+    <tr><th>Source code</th><td>https://github.com/GaziArnob/CashpPlot (branch cashpilot-final)</td></tr>
+    <tr><th>Contact</th><td><span class="warn">[Team email]</span></td></tr>
+  </table>
+  <div class="foot"><span>CashPilot</span><span>16</span></div>
+</div>
+
+</body></html>
