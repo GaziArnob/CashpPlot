@@ -1,6 +1,6 @@
 # CashPilot: manual test cases
 
-Run these on the live site (https://chinese-hackathon.vercel.app) or locally (http://localhost:3000, demo login
+Run these on the live site (https://cashpilot-ai-demo.vercel.app) or locally (http://localhost:3000, demo login
 `demo@example.com` / `Demo@12345`).
 
 - A **new account on the live site is empty**, so charts and the forecast stay thin. Import the sample CSV in section B first.

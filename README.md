@@ -8,7 +8,9 @@ the business can safely borrow. English, any currency.
 figure it adds that the engines did not produce is rejected. Nothing is paid, sent or applied for without the owner
 pressing the button.
 
-**Live demo:** https://chinese-hackathon.vercel.app (API: https://cashpilot-api-26h3.onrender.com)
+**Live demo:** https://cashpilot-ai-demo.vercel.app
+**API:** https://cashpilot-api-26h3.onrender.com
+**Source:** https://github.com/GaziArnob/CashpPlot (branch `cashpilot-final`)
 **Local demo data:** `python -m seed.seed`, then sign in as `demo@example.com` / `Demo@12345`
 
 The first request after a pause on the free hosting can take about 50 seconds.

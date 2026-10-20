@@ -31,7 +31,7 @@ below are what the files in it are set up for. Free-tier limits change, so check
 ## 3. Website (Vercel)
 
 1. https://vercel.com → Add New Project → this repository, **Root Directory: `frontend`**.
-2. Environment variable `NEXT_PUBLIC_API_URL` = the Render address (e.g. `https://cashpilot-api.onrender.com`).
+2. Environment variable `NEXT_PUBLIC_API_URL` = the Render address (e.g. `https://cashpilot-api-26h3.onrender.com`).
 3. Put the Vercel address into Render's `CORS_ORIGINS` and `APP_URL`.
 4. The Vercel Hobby plan is for personal, non-commercial use.
 
