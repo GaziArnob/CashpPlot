@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useState } from "react";
 import { CheckCircle2, Copy, Info, Send, X } from "lucide-react";
 import { Button, ErrorBox } from "@/components/ui";
@@ -34,9 +35,11 @@ export default function ReminderModal({ draft, onClose }: { draft: ReminderDraft
     }
   }
 
-  return (
-    <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+  if (typeof document === "undefined") return null;
+  // Rendered on <body>: inside a card (which has a transform and a blur) a fixed overlay would be sized to that card.
+  return createPortal(
+    <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="ff-pop w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h3 className="font-semibold">Reminder to {draft.customer}</h3>
@@ -87,6 +90,7 @@ export default function ReminderModal({ draft, onClose }: { draft: ReminderDraft
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -270,7 +270,7 @@ body::after {
     0 18px 38px -14px rgb(var(--ff-brand) / 0.35);
 }
 /* dialogs and tall panels stay solid and do not float away under the pointer */
-.ff-pop.bg-white, .ff-pop.bg-white:hover { background-color: rgb(var(--ff-surface)); transform: none; }
+.ff-pop.bg-white, .ff-pop.bg-white:hover { background-color: rgb(var(--ff-surface)); -webkit-backdrop-filter: none; backdrop-filter: none; transform: none; }
 .overflow-x-auto.bg-white:hover, table.bg-white:hover { transform: none; }
 
 /* sidebar and top bar: glass, with a glowing active link */

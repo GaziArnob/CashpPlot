@@ -1,13 +1,16 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 
 export default function Modal({ title, subtitle, onClose, children, wide }: {
   title: string; subtitle?: string; onClose: () => void; children: ReactNode; wide?: boolean;
 }) {
-  return (
-    <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
+  if (typeof document === "undefined") return null;
+  // Rendered on <body>: inside a card (which has a transform and a blur) a fixed overlay would be sized to that card.
+  return createPortal(
+    <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className={`ff-pop max-h-[90vh] w-full overflow-y-auto rounded-xl bg-white p-6 shadow-xl ${wide ? "max-w-2xl" : "max-w-md"}`}
         onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
         <div className="mb-4 flex items-start justify-between gap-3">
@@ -19,7 +22,8 @@ export default function Modal({ title, subtitle, onClose, children, wide }: {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
