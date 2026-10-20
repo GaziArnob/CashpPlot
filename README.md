@@ -36,7 +36,7 @@ Billing is in demo mode (no payments).
 ```
 Browser -> Website (Next.js, Vercel) -> API (FastAPI, Render) -> Database (PostgreSQL, Neon)
                                               |-> Email (Mailjet / Brevo / SMTP)
-                                              |-> WhatsApp (Meta Cloud API or Twilio)
+                                              |-> WhatsApp (Bird, Meta Cloud API or Twilio)
                                               |-> AI (Groq, Gemini; optional)
                                               |-> Bank import (Plaid sandbox)
 ```

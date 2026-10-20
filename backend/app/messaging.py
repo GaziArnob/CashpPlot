@@ -55,17 +55,27 @@ def _meta_ready() -> bool:
     return bool(s.whatsapp_token and s.whatsapp_phone_number_id)
 
 
+def _bird_ready() -> bool:
+    s = get_settings()
+    return bool(s.bird_api_key and s.bird_template_slug)
+
+
 def _twilio_whatsapp_ready() -> bool:
     return _twilio_ready() and bool(get_settings().twilio_whatsapp_from)
 
 
 def whatsapp_provider() -> str | None:
-    """"meta", "twilio" or None. WHATSAPP_PROVIDER picks one; "auto" prefers Meta when its keys are set."""
+    """"bird", "meta", "twilio" or None. WHATSAPP_PROVIDER picks one; "auto" takes the first with its keys set:
+    Bird, then Meta, then Twilio."""
     choice = (get_settings().whatsapp_provider or "auto").strip().lower()
+    if choice == "bird":
+        return "bird" if _bird_ready() else None
     if choice == "meta":
         return "meta" if _meta_ready() else None
     if choice == "twilio":
         return "twilio" if _twilio_whatsapp_ready() else None
+    if _bird_ready():
+        return "bird"
     if _meta_ready():
         return "meta"
     return "twilio" if _twilio_whatsapp_ready() else None
@@ -196,6 +206,34 @@ def _clean(value: str) -> str:
     return " ".join(str(value).split())[:200]
 
 
+def _bird_host(key: str) -> str:
+    """A Bird key is bk_<region>_..., and the region picks the host (a key sent to the wrong region is refused)."""
+    m = re.match(r"^bk_([a-z0-9]+)_", key)
+    return f"https://{m.group(1) if m else 'us1'}.platform.bird.com"
+
+
+def _bird(to: str, params: list[str]) -> Delivery:
+    """WhatsApp through Bird: one approved template per message (POST /v1/whatsapp/messages, bearer key). Bird accepts
+    it with 202 and delivers asynchronously, so "delivered" here means Bird took it."""
+    s = get_settings()
+    template: dict = {"slug": s.bird_template_slug}
+    if s.bird_template_lang:
+        template["language"] = s.bird_template_lang
+    if params:
+        template["components"] = [{"type": "body", "parameters": [{"type": "text", "text": _clean(p)} for p in params]}]
+    body: dict = {"to": to, "template": template}
+    if s.bird_whatsapp_from:
+        body["from"] = normalize_phone(s.bird_whatsapp_from) or s.bird_whatsapp_from
+    try:
+        r = httpx.post(f"{_bird_host(s.bird_api_key)}/v1/whatsapp/messages", timeout=TIMEOUT,
+                       headers={"Authorization": f"Bearer {s.bird_api_key}"}, json=body)
+    except httpx.HTTPError:
+        raise DeliveryError("Could not reach Bird")
+    _check(r, "Bird")
+    return Delivery(True, "bird-whatsapp", "Sent through Bird with the approved template, so the wording is the template's, "
+                                           "not your edited text. Bird delivers it in the background.")
+
+
 def _twilio_whatsapp(to: str, text: str) -> Delivery:
     """WhatsApp through Twilio. In the sandbox the person must first send Twilio's join phrase to the sandbox number;
     after that, free text reaches them for 24 hours from their last message."""
@@ -229,6 +267,9 @@ def send(channel: str, *, to_email: str | None, to_phone: str | None, subject: s
     if phone is None:
         raise ValueError("This customer has no phone number on file in international format, e.g. +14155550123")
     if channel == "whatsapp":
-        if whatsapp_provider() == "meta":
+        provider = whatsapp_provider()
+        if provider == "bird":
+            return _bird(phone, template_params or [])
+        if provider == "meta":
             return _whatsapp(phone, text, template_params or [])
         return _twilio_whatsapp(phone, text)

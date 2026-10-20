@@ -46,12 +46,16 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = ""  # defaults to smtp_user
-    # Which WhatsApp provider to use: auto (Meta if its keys are set, else Twilio), meta, or twilio.
+    # Which WhatsApp provider to use: auto (Bird, else Meta, else Twilio, whichever has its keys set), bird, meta or twilio.
     whatsapp_provider: str = "auto"
     whatsapp_token: str = ""  # Meta WhatsApp Cloud API access token
     whatsapp_phone_number_id: str = ""
     whatsapp_template_name: str = ""  # an approved template; lets a reminder reach customers who have not messaged you
     whatsapp_template_lang: str = "en_US"
+    bird_api_key: str = ""  # WhatsApp through Bird (https://bird.com/whatsapp-api): a bk_<region>_... key
+    bird_template_slug: str = ""  # the approved WhatsApp template to send (Bird sends business-initiated messages as templates)
+    bird_template_lang: str = ""  # e.g. en or en_US; empty uses the template's default language
+    bird_whatsapp_from: str = ""  # your connected WhatsApp number, e.g. +8801XXXXXXXXX; empty for a Bird-managed template
     twilio_account_sid: str = ""  # WhatsApp through Twilio, https://www.twilio.com
     twilio_auth_token: str = ""
     # The WhatsApp sender: the sandbox number "whatsapp:+14155238886", or your approved sender.
@@ -73,7 +77,7 @@ class Settings(BaseSettings):
     daily_job_hour: int = 7
     alerts_log_path: str = "alerts.log"
 
-    @field_validator("whatsapp_token", "whatsapp_phone_number_id", "twilio_account_sid", "twilio_auth_token",
+    @field_validator("whatsapp_token", "whatsapp_phone_number_id", "bird_api_key", "twilio_account_sid", "twilio_auth_token",
                      "brevo_api_key", "mailjet_api_key", "mailjet_secret_key", "smtp_password", "stripe_secret_key",
                      "plaid_secret", mode="before")
     @classmethod

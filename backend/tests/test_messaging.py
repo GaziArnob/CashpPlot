@@ -457,3 +457,74 @@ def test_a_chosen_provider_without_its_keys_means_no_whatsapp(client, demo_heade
     assert messaging.whatsapp_provider() == "twilio"
     monkeypatch.setattr(s, "whatsapp_provider", " Twilio ")             # stray spaces and capitals are fine
     assert messaging.whatsapp_provider() == "twilio"
+
+
+# WhatsApp through Bird
+
+@pytest.fixture()
+def bird_only(monkeypatch):
+    s = get_settings()
+    for k, v in dict(whatsapp_token="", whatsapp_phone_number_id="", twilio_account_sid="", twilio_auth_token="",
+                     twilio_whatsapp_from="", bird_api_key="bk_eu1_abcdef", bird_template_slug="payment_reminder",
+                     bird_template_lang="en", bird_whatsapp_from="").items():
+        monkeypatch.setattr(s, k, v)
+
+    class Calls(list):
+        code = {"code": 202}
+
+    calls = Calls()
+    monkeypatch.setattr(httpx, "post", lambda url, **kw: (calls.append((url, kw)), FakeResp(calls.code["code"]))[1])
+    return calls
+
+
+def test_bird_sends_the_template_to_the_keys_region_with_a_bearer_key(client, demo_headers, bird_only, monkeypatch):
+    assert client.get("/messaging/channels", headers=demo_headers).json() == {"email": False, "whatsapp": True}
+    monkeypatch.setattr(get_settings(), "bird_whatsapp_from", "+8801700000000")
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp"})
+    assert r.status_code == 200 and r.json()["delivery"] == "delivered", r.text
+    url, kw = bird_only[-1]
+    assert url == "https://eu1.platform.bird.com/v1/whatsapp/messages"
+    assert kw["headers"]["Authorization"] == "Bearer bk_eu1_abcdef"
+    body = kw["json"]
+    assert body["to"] == "+14155550123" and body["from"] == "+8801700000000"
+    assert body["template"]["slug"] == "payment_reminder" and body["template"]["language"] == "en"
+    params = body["template"]["components"][0]["parameters"]
+    assert body["template"]["components"][0]["type"] == "body" and len(params) == 4 and all(p["type"] == "text" for p in params)
+    assert "template" in r.json()["delivery_note"]
+
+
+def test_bird_needs_a_template_and_can_be_chosen_explicitly(client, demo_headers, bird_only, monkeypatch):
+    s = get_settings()
+    monkeypatch.setattr(s, "bird_template_slug", "")                      # no template: Bird is not usable
+    assert client.get("/messaging/channels", headers=demo_headers).json()["whatsapp"] is False
+    monkeypatch.setattr(s, "bird_template_slug", "payment_reminder")
+    monkeypatch.setattr(s, "whatsapp_token", "t")                          # Meta is set too: auto prefers Bird,
+    monkeypatch.setattr(s, "whatsapp_phone_number_id", "9")                # but a choice of meta wins
+    from app import messaging
+    assert messaging.whatsapp_provider() == "bird"
+    monkeypatch.setattr(s, "whatsapp_provider", "meta")
+    assert messaging.whatsapp_provider() == "meta"
+    monkeypatch.setattr(s, "whatsapp_provider", "bird")
+    assert messaging.whatsapp_provider() == "bird"
+
+
+def test_bird_refusal_shows_its_reason_and_keeps_the_draft(client, demo_headers, bird_only):
+    reminder = _draft(client, demo_headers)
+    _customer_contact(client, demo_headers, reminder)
+    bird_only.code["code"] = 401
+    FakeResp.body = {"message": "Invalid API key"}
+    try:
+        r = client.post(f"/reminders/{reminder['id']}/send", headers=demo_headers, json={"channel": "whatsapp"})
+        assert r.status_code == 502 and "Bird rejected the message (401)" in r.json()["detail"] and "Invalid API key" in r.json()["detail"]
+    finally:
+        FakeResp.body = None
+    assert client.get("/reminders", headers=demo_headers).json()[0]["status"] != "sent"
+
+
+def test_bird_host_follows_the_key_region():
+    from app.messaging import _bird_host
+    assert _bird_host("bk_us1_x") == "https://us1.platform.bird.com"
+    assert _bird_host("bk_eu1_x") == "https://eu1.platform.bird.com"
+    assert _bird_host("odd") == "https://us1.platform.bird.com"

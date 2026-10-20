@@ -45,9 +45,24 @@ Each one is off until its keys are set in Render, and none of them acts without 
 | Email reminders by SMTP, free with any mailbox (e.g. Gmail). **Does not work on Render's free plan, which blocks SMTP ports 25, 465 and 587**; fine on your own computer or a paid plan | `SMTP_HOST`, `SMTP_PORT` (587, or 465 for SSL), `SMTP_USER`, `SMTP_PASSWORD`, optional `SMTP_FROM` | The reminder dialog's Email channel delivers the message. For Gmail: turn on 2-step verification, then Google Account → Security → App passwords, and use that 16-character password as `SMTP_PASSWORD` (host `smtp.gmail.com`). Gmail allows about 500 messages a day |
 | Email reminders through Brevo instead, https://www.brevo.com (used first when set; it also has a free plan, check its pricing page) | `BREVO_API_KEY`, `BREVO_SENDER_EMAIL` (a sender verified in Brevo) | The reminder dialog's Email channel delivers the message |
 | WhatsApp, https://developers.facebook.com/docs/whatsapp/cloud-api | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and for real customers `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANG` | WhatsApp channel. Without a template, free-form text only reaches people who messaged the business in the last 24 hours, plus test numbers. See "WhatsApp template" below |
+| WhatsApp through Bird, https://bird.com/whatsapp-api (used first when set) | `BIRD_API_KEY` (a `bk_<region>_...` key), `BIRD_TEMPLATE_SLUG`, optional `BIRD_TEMPLATE_LANG`, `BIRD_WHATSAPP_FROM` | WhatsApp channel. Bird sends business-initiated messages as approved templates only. See "WhatsApp through Bird" below |
 | WhatsApp through Twilio (no Meta setup), https://www.twilio.com | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` (`whatsapp:+14155238886` for the sandbox) | WhatsApp channel. See "WhatsApp through Twilio" below |
 | Pro payments, https://stripe.com | `BILLING_MODE=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Settings → Upgrade to Pro opens Stripe Checkout |
 | Bank import, https://plaid.com | `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox` | Transactions → Connect a bank. Sandbox uses sample banks only |
+
+### WhatsApp through Bird
+
+1. In your Bird workspace, create an API key (it looks like `bk_us1_...` or `bk_eu1_...`; the region in the key picks the
+   host, so nothing else to set). Put it in Render as `BIRD_API_KEY`. Never paste it in chat or in git.
+2. Connect a WhatsApp number in Bird (or use one of Bird's managed templates, which send from a Bird number), and create a
+   template with **four variables**, in this order: customer name, business name, amount, due date. For example:
+   `Hello {{1}}, this is {{2}}. A payment of {{3}} was due on {{4}}. Please reply if you have any questions.`
+3. Set `BIRD_TEMPLATE_SLUG` to the template's slug, `BIRD_TEMPLATE_LANG` to its language (for example `en`; leave empty for the
+   template's default), and `BIRD_WHATSAPP_FROM` to your connected number in international format (empty for a managed template).
+4. Manual Deploy. Bird is used first when set; choose another with `WHATSAPP_PROVIDER=meta` or `twilio`.
+5. The sent message uses the template's wording, not the text edited in the dialog. Bird accepts it with a 202 and delivers in the
+   background, so "sent" means Bird took it. Customer numbers must look like `+8801XXXXXXXXX`.
+6. Bird's pricing and any free trial are on its own site; check them before relying on it.
 
 ### WhatsApp through Twilio (no Meta setup)
 
