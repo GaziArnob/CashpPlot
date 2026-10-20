@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>CashPilot: Technical Documentation</title>
+<style>
+@page { size: A4; margin: 18mm 16mm 18mm; @bottom-center { content: "Technical Documentation  ·  Page " counter(page); font-size: 8.5pt; color: #777; } }
+body { font-family: "Segoe UI", Arial, sans-serif; color: #1c1b22; font-size: 10pt; line-height: 1.5; }
+h1 { font-size: 24pt; margin: 0 0 2px; color: #2f2f9e; }
+.meta { color: #666; font-size: 9.5pt; margin-bottom: 12px; }
+h2 { font-size: 14.5pt; color: #2f2f9e; border-bottom: 2px solid #d9d8f3; padding-bottom: 3px; margin: 20px 0 8px; page-break-after: avoid; }
+h3 { font-size: 11.5pt; color: #3b3bb0; margin: 14px 0 4px; page-break-after: avoid; }
+p { margin: 4px 0 7px; }
+table { border-collapse: collapse; width: 100%; margin: 6px 0 10px; font-size: 9.3pt; page-break-inside: auto; }
+tr { page-break-inside: avoid; }
+th, td { border: 1px solid #d6d4e0; padding: 4px 7px; text-align: left; vertical-align: top; }
+th { background: #eeedfb; color: #2f2f9e; }
+code { background: #f1f0f7; padding: 0 3px; border-radius: 3px; font-size: 8.8pt; }
+.f { background: #f7f6fc; border-left: 3px solid #5b5bd6; padding: 6px 10px; margin: 6px 0 10px; font-family: Cambria, "Times New Roman", serif; font-size: 10pt; }
+.note { background: #fdf7e6; border-left: 3px solid #ba7517; padding: 6px 10px; margin: 8px 0; font-size: 9.4pt; }
+ul, ol { margin: 4px 0 8px 18px; padding: 0; }
+li { margin: 1px 0; }
+.ok { color: #0f6e56; font-weight: 600; } .pl { color: #a86b00; font-weight: 600; }
+.pb { page-break-before: always; }
+</style></head><body>
+
+<h1>Technical Documentation</h1>
+<div class="meta">CashPilot: an AI financial assistant for small and medium businesses · Oct 20, 2026 · @Arnob<br>This document describes what is built and running. Items not built yet are marked <span class="pl">planned</span>.</div>
+
+<h2>Introduction</h2>
+<p>CashPilot is an AI financial assistant for small and medium businesses. It warns owners about cash shortages 7 to 30 days in advance, tells them who to collect money from first, builds an action plan to close the gap, gives them an explainable credit score, and estimates how much they can safely borrow. Live: <b>https://cashpilot-ai-demo.vercel.app</b> · Source: <b>https://github.com/GaziArnob/CashpPlot</b> (branch <code>cashpilot-final</code>).</p>
+
+<h2>1. System Architecture</h2>
+<p>The system has four layers: a Next.js web client, a FastAPI application server, an intelligence layer of deterministic engines plus an AI agent, and a PostgreSQL data layer. Requests flow top-down; the agent reaches data only by calling the engines as tools.</p>
+<table>
+<tr><th>#</th><th>Feature</th><th>What it does</th></tr>
+<tr><td>1</td><td>Cash Flow Prediction</td><td>Projects the daily balance 7 to 30 days ahead, flags shortage days, and runs what-if scenarios</td></tr>
+<tr><td>2</td><td>Cash Advisor</td><td>Turns a shortage into an ordered action plan (collect, clear stock, delay a bill, cut spending), each step simulated on the forecast</td></tr>
+<tr><td>3</td><td>Smart Payment Recovery</td><td>Ranks customers by collection priority, suggests an action and a credit limit, and drafts reminders (WhatsApp or email, sent only after the owner approves)</td></tr>
+<tr><td>4</td><td>Supplier Payment Plans</td><td>Detects payment clashes, proposes instalments, compares financing and drafts the supplier message</td></tr>
+<tr><td>5</td><td>AI Credit Scoring</td><td>Explainable 300 to 900 score from income, cash flow, dues and repayment history, plus a "how to raise it" planner</td></tr>
+<tr><td>6</td><td>Loan Readiness &amp; Recommendation</td><td>Safe loan amount and matching products from an 8-type loan catalog (an estimate, not an approval); consent-based lender introductions</td></tr>
+<tr><td>7</td><td>Product Performance</td><td>Margin, trend and stock-days per product; push, keep, shrink or clear</td></tr>
+<tr><td>8</td><td>Notifications</td><td>16 alert rules, unread count, preferences, optional urgent email</td></tr>
+<tr><td>9</td><td>AI Financial Agent</td><td>Answers questions in plain language using seven read-only engine tools</td></tr>
+</table>
+
+<h3>1.1 Design principle: deterministic core, AI interface</h3>
+<p>Every financial number is computed by deterministic, testable engines. The LLM never calculates figures; it interprets the user's intent, picks which engine to call, and explains the result. Any number in an AI answer that the engines did not produce is detected and the answer is replaced by a template. This keeps every output auditable and prevents hallucinated numbers.</p>
+<p><b>No paid AI services.</b> All AI features run on free options behind one LLM provider layer; the provider order is one setting (<code>LLM_PROVIDERS=gemini,groq,ollama</code>). If a free-tier rate limit is hit or a provider fails, the request falls back to the next one, and finally to templates, so the product works with no AI key at all.</p>
+
+<h3>1.2 Components</h3>
+<table>
+<tr><th>Order</th><th>Provider</th><th>Cost</th><th>Used for</th></tr>
+<tr><td>1</td><td>Google Gemini API (free tier)</td><td>Free, rate-limited</td><td>Agent chat with tool calling, explanations, receipt reading (vision fallback)</td></tr>
+<tr><td>2</td><td>Groq API (free tier, open-source models)</td><td>Free, rate-limited</td><td>Fallback for chat and text generation</td></tr>
+<tr><td>3</td><td>Ollama with an open model on the server (e.g. Qwen 2.5 7B)</td><td>Free, offline</td><td>Local-only mode; off unless enabled (<code>OLLAMA_ENABLED</code>)</td></tr>
+<tr><td>–</td><td>Tesseract OCR</td><td>Free, open source</td><td>Receipt text extraction without any API; Gemini vision is used only if Tesseract is not installed</td></tr>
+<tr><td>–</td><td>Templates</td><td>Free</td><td>Reminder and explanation text if every LLM provider is unavailable</td></tr>
+</table>
+<table>
+<tr><th>Component</th><th>Layer</th><th>Responsibility</th></tr>
+<tr><td>Web client</td><td>Presentation</td><td>Pages, charts, chat interface, form validation (Next.js 16, React 19)</td></tr>
+<tr><td>API routes</td><td>Application</td><td>Request validation, authentication, plan checks, rate limiting (<code>app/api/</code>)</td></tr>
+<tr><td>Forecast Engine</td><td>Intelligence</td><td>Projects daily cash 7 to 30 days ahead and flags shortages</td></tr>
+<tr><td>Collection (Recovery) Engine</td><td>Intelligence</td><td>Ranks overdue receivables, suggests actions and credit limits</td></tr>
+<tr><td>Credit Engine and Credit Plan</td><td>Intelligence</td><td>Explainable score from 300 to 900, and the effect of each improving action</td></tr>
+<tr><td>Loan Engine and Loan Catalog</td><td>Intelligence</td><td>Safe borrowing capacity, 8 loan types matched by score and amount</td></tr>
+<tr><td>What-if Engine</td><td>Intelligence</td><td>Re-runs the forecast under user-defined scenarios</td></tr>
+<tr><td>Planner (Cash Advisor)</td><td>Intelligence</td><td>Ordered action plan, each step simulated against the forecast</td></tr>
+<tr><td>Payables Engines</td><td>Intelligence</td><td>Dated cash flow, payment clashes, instalment plans, financing comparison</td></tr>
+<tr><td>Product Engine</td><td>Intelligence</td><td>Margin, turnover and cash conversion per product</td></tr>
+<tr><td>Insight Engine</td><td>Intelligence</td><td>Spending anomalies and period-over-period changes; P&amp;L reports</td></tr>
+<tr><td>Alert rules and Daily job</td><td>Application</td><td>16 isolated rules create notifications; a daily job refreshes scores, plans and sends urgent email</td></tr>
+<tr><td>Messaging layer</td><td>Application</td><td>Owner-approved delivery: email (Mailjet, Brevo or SMTP) and WhatsApp (Bird, Meta Cloud API or Twilio)</td></tr>
+<tr><td>AI Agent</td><td>Intelligence</td><td>Natural-language interface that calls the engines as tools</td></tr>
+<tr><td>PostgreSQL</td><td>Data</td><td>Persistent data isolated per business (SQLite for local development)</td></tr>
+</table>
+
+<h3>1.3 Frontend pages</h3>
+<table>
+<tr><th>#</th><th>Page</th><th>Route</th><th>Contains</th></tr>
+<tr><td>1</td><td>Landing</td><td>/</td><td>Product intro and call to action</td></tr>
+<tr><td>2</td><td>Auth and Onboarding</td><td>/login, /signup, /onboarding</td><td>Login, signup, a three-step business setup wizard</td></tr>
+<tr><td>3</td><td>Dashboard</td><td>/dashboard</td><td>KPI cards, cash alerts, daily AI summary, collect-first list</td></tr>
+<tr><td>4</td><td>Cash Advisor</td><td>/advisor</td><td>Shortage plan with approve, done and dismiss</td></tr>
+<tr><td>5</td><td>Notifications</td><td>/notifications</td><td>Alert list, unread/all tabs, mark read</td></tr>
+<tr><td>6</td><td>Transactions</td><td>/transactions</td><td>List, add, CSV import, receipt scan, bank import (Plaid sandbox)</td></tr>
+<tr><td>7</td><td>Cash Flow</td><td>/cashflow</td><td>Forecast chart, shortage days, calendar, what-if</td></tr>
+<tr><td>8</td><td>Ledger</td><td>/ledger</td><td>Receivables (invoices, recovery, reminders) and payables (suppliers, bills)</td></tr>
+<tr><td>9</td><td>Customers</td><td>/customers</td><td>Customer list, profile, payment history, risk level, edit</td></tr>
+<tr><td>10</td><td>Supplier Plans</td><td>/payables</td><td>Payment clashes, instalment plans, financing comparison, drafts</td></tr>
+<tr><td>11</td><td>Products</td><td>/products</td><td>Product performance quadrant, sales and stock</td></tr>
+<tr><td>12</td><td>Credit Score</td><td>/credit-score</td><td>Score gauge, factors, history, "how to raise your score"</td></tr>
+<tr><td>13</td><td>Loan Center</td><td>/loan</td><td>Readiness, recommended amount, 8 loan types, checklist, what-if, My loans, introduction requests</td></tr>
+<tr><td>14</td><td>Reports</td><td>/reports</td><td>P&amp;L, expense insights, goals, PDF export</td></tr>
+<tr><td>15</td><td>AI Agent</td><td>/agent</td><td>Chat, suggested questions</td></tr>
+<tr><td>16</td><td>Settings</td><td>/settings</td><td>Business profile, cash threshold, reminder tone, AI privacy, plan, team, two-factor, lender access, notifications, data export</td></tr>
+<tr><td>17</td><td>Lender view</td><td>/lender</td><td>Read-only, consent-scoped view for a lender with a token</td></tr>
+</table>
+
+<h3 class="pb">1.4 Data model</h3>
+<p>Every business-owned table carries a <code>business_id</code>, which is how tenant data is isolated. 34 tables, created by eight Alembic migrations.</p>
+<table>
+<tr><th>Group</th><th>Tables and key fields</th></tr>
+<tr><td>Accounts</td><td><code>users</code> (name, email, phone, password_hash, role, TOTP secret, failed_logins, locked_until), <code>businesses</code> (name, type, currency, started_at, cash_threshold, plan, ai_mode), <code>refresh_tokens</code> (jti, rotation), <code>audit_log</code></td></tr>
+<tr><td>Records</td><td><code>transactions</code> (date, amount, type income/expense, category, source manual/csv/scan/bank), <code>customers</code>, <code>invoices</code>, <code>invoice_payments</code>, <code>suppliers</code>, <code>bills</code>, <code>recurring_expenses</code>, <code>products</code>, <code>sale_items</code>, <code>stock_movements</code></td></tr>
+<tr><td>Engines and plans</td><td><code>collection_scores</code>, <code>product_scores</code>, <code>credit_scores</code> (score, factors JSON), <code>recommendations</code>, <code>action_logs</code>, <code>payables_recommendations</code>, <code>payment_plans</code>, <code>payment_plan_installments</code>, <code>negotiation_drafts</code>, <code>financing_offers</code></td></tr>
+<tr><td>Credit and loans</td><td><code>loans</code>, <code>repayments</code>, <code>loan_products</code> (the 8-type catalog), <code>lender_referrals</code>, <code>lender_access</code> (scope, expires_at, revoked)</td></tr>
+<tr><td>Communication</td><td><code>reminders</code> (message, tone, channel, status), <code>notifications</code> (type, severity, dedupe key, link, is_read), <code>chat_messages</code>, <code>goals</code></td></tr>
+<tr><td>Integrations</td><td><code>bank_connections</code> (the bank access token is stored encrypted and never sent to the browser)</td></tr>
+</table>
+
+<h3>1.5 Main API endpoints</h3>
+<table>
+<tr><th>Module</th><th>Endpoints</th></tr>
+<tr><td>Auth</td><td><code>POST /auth/signup, /auth/login, /auth/refresh, /auth/logout</code>; <code>GET /auth/me</code>; <code>POST /onboarding</code>; <code>POST /auth/2fa/setup, /auth/2fa/enable, /auth/2fa/disable</code></td></tr>
+<tr><td>Dashboard</td><td><code>GET /dashboard/summary</code></td></tr>
+<tr><td>Transactions</td><td><code>GET, POST /transactions</code>; <code>POST /transactions/import</code>; <code>POST /transactions/scan</code></td></tr>
+<tr><td>Cash flow</td><td><code>GET /cashflow/forecast?days=30</code>; <code>GET /cashflow/calendar</code>; <code>GET /cashflow/upcoming</code></td></tr>
+<tr><td>Cash Advisor</td><td><code>GET /action-plan</code>; <code>POST /actions/{id}/mark-done, /dismiss, /reopen</code>; <code>GET /cash-advisor/summary</code></td></tr>
+<tr><td>Ledger</td><td><code>GET, POST /invoices</code>; <code>PATCH /invoices/{id}/paid</code>; <code>POST /invoices/{id}/payments</code>; <code>GET /recovery/priority</code>; <code>POST /recovery/reminder/{invoice_id}</code>; <code>POST /reminders/{id}/send</code>; <code>GET /messaging/channels</code>; <code>GET, POST /suppliers, /bills</code></td></tr>
+<tr><td>Customers</td><td><code>GET, POST /customers</code>; <code>PUT, GET /customers/{id}</code>; <code>POST /customers/{id}/credit-limit</code>; <code>GET /collections/priority</code></td></tr>
+<tr><td>Supplier plans</td><td><code>GET /payables/analysis</code>; <code>POST, GET /payables/recommendations</code>; <code>GET /financing/compare</code>; <code>/payment-plans</code> (create, update, approve, supplier-response, cancel); <code>/negotiation-drafts</code></td></tr>
+<tr><td>Products</td><td><code>GET, POST /products</code>; <code>GET /products/performance</code>; <code>POST /sale-items, /stock-movements</code></td></tr>
+<tr><td>Credit</td><td><code>GET /credit-score</code>; <code>GET /credit-score/plan</code>; <code>GET /credit-score/history</code></td></tr>
+<tr><td>Loan</td><td><code>GET /loan/readiness, /loan/recommendations</code>; <code>POST /loan/what-if</code>; <code>/loans</code> (list, create, delete, repayments); <code>/referrals</code></td></tr>
+<tr><td>Reports</td><td><code>GET /reports/pnl, /reports/insights, /reports/export</code>; <code>/goals</code></td></tr>
+<tr><td>Notifications</td><td><code>GET /notifications</code>; <code>/notifications/summary</code>; <code>POST /notifications/read-all</code>; <code>PATCH /notifications/{id}/read</code>; <code>DELETE</code>; <code>GET, PUT /notifications/preferences</code></td></tr>
+<tr><td>Agent</td><td><code>POST /agent/chat</code> and <code>/agent/chat/stream</code> (streaming); <code>GET /agent/history, /agent/suggestions</code></td></tr>
+<tr><td>Settings and team</td><td><code>GET, PUT /settings</code>; <code>GET, POST, DELETE /lender-access</code>; <code>GET /lender/view</code>; <code>GET /settings/export</code>; <code>DELETE /settings/account</code>; <code>/team</code> (add, remove, reactivate, reset password)</td></tr>
+<tr><td>Billing and bank</td><td><code>GET, POST /billing/plan</code> (demo mode); Stripe checkout and webhook (off by default); <code>/bank</code> (status, link, exchange, sync, delete) with Plaid sandbox</td></tr>
+</table>
+
+<h3>1.6 Request flow example</h3>
+<p>A user asks: "Will I run short on cash next week?"</p>
+<ol>
+<li>The client sends <code>POST /agent/chat</code>.</li>
+<li>The Agent Service sends the question and the tool schemas to the LLM.</li>
+<li>The LLM requests <code>get_cash_forecast(days=7)</code>.</li>
+<li>The Agent Service calls the Forecast Engine with the <code>business_id</code> from the session; the engine reads transactions, invoices and bills.</li>
+<li>The engine returns a shortage date and gap amount.</li>
+<li>The Agent Service passes the result back to the LLM.</li>
+<li>The LLM writes the answer, for example: "You may be short about 12,000 on Oct 22. Rahim Store owes you 15,000, 10 days overdue; collecting it covers the gap."</li>
+<li>Any figure in the answer is checked against the tool results, and the answer streams back to the client.</li>
+</ol>
+
+<h3>1.7 Technology stack</h3>
+<table>
+<tr><th>Layer</th><th>Technology</th></tr>
+<tr><td>Frontend</td><td>Next.js 16, React 19, TypeScript, Tailwind CSS 4, Recharts</td></tr>
+<tr><td>Backend</td><td>Python, FastAPI, Pydantic 2, SQLAlchemy 2, Alembic (migrations)</td></tr>
+<tr><td>Analytics</td><td>NumPy; an own Holt-Winters implementation (additive, damped trend); scikit-learn (logistic regression for payment probability)</td></tr>
+<tr><td>AI</td><td>Free-tier LLM APIs: Google Gemini (primary), Groq (fallback); Ollama local model as an optional offline mode; Tesseract OCR for receipts</td></tr>
+<tr><td>Database</td><td>PostgreSQL with row-level security (Neon); SQLite for local development</td></tr>
+<tr><td>Integrations</td><td>Mailjet, Brevo or SMTP (email); Bird, Meta Cloud API or Twilio (WhatsApp); Plaid sandbox (bank import); Stripe (code present, off by default)</td></tr>
+<tr><td>Deployment</td><td>Vercel (frontend), Render (backend, Docker), Neon (database). All free tiers.</td></tr>
+</table>
+
+<h2 class="pb">2. Core Algorithm Description</h2>
+<p>Several engines do the analysis. Each is deterministic and testable, and the AI agent only calls them as tools.</p>
+
+<h3>2.1 Cash flow prediction</h3>
+<p><b>Goal:</b> project the daily cash balance for the next H days (H = 7 to 30) and flag shortages.</p>
+<ol>
+<li><b>Daily series.</b> Group transactions by day into income I(t) and expense E(t), over the last 180 days. Scheduled items (rent, salaries, loan installments, bills) are removed from the trend model and placed on their exact day instead, because a few large monthly payments distort a daily trend. Outliers are capped.</li>
+<li><b>Baseline forecast.</b> Holt-Winters additive smoothing with a damped trend and weekly seasonality (period 7). With less than 60 days of history, fall back to a 28-day weighted moving average multiplied by a day-of-week factor (average of each weekday over the last 12 weeks).</li>
+<li><b>Known future events.</b> Add expected invoice inflows, weighted by each customer's historical on-time payment rate, and subtract bills, loan installments and recurring payables on their due dates. Each amount is counted once and tagged <i>confirmed</i> (known obligations) or <i>estimated</i> (forecast sales and running costs).</li>
+<li><b>Balance projection.</b> Roll the balance forward day by day.</li>
+<li><b>Shortage detection.</b> Flag every day where the projected balance falls below the business's cash threshold.</li>
+</ol>
+<div class="f">Î(t) = WMA₂₈(I) · DOW_I(t),  Ê(t) = WMA₂₈(E) · DOW_E(t)<br>
+B(t) = B(t−1) + Î(t) − Ê(t) + Σ<sub>invoices due t</sub> aᵢ · p_collect(cᵢ) − Σ<sub>bills due t</sub> bⱼ<br>
+Shortage at t ⇔ B(t) &lt; threshold,  Gap(t) = threshold − B(t)</div>
+<p>An 80% confidence band (±1.28 times the standard deviation of past one-step forecast errors) is drawn around the line. A day is marked "at risk" when only the lower edge of the band crosses the threshold. <b>Output:</b> daily projected balance, shortage dates, gap amounts and the main drivers of each shortage.</p>
+
+<h3>2.2 Smart payment recovery</h3>
+<p><b>Goal:</b> rank customers by who should be contacted first, suggest what to do, set a credit limit, and draft a reminder.</p>
+<div class="f">Priority = 100 · (0.30·A + 0.25·D + 0.15·R + 0.15·C + 0.15·P)</div>
+<table>
+<tr><th>Feature</th><th>Definition (normalized 0 to 1)</th><th>Weight</th></tr>
+<tr><td>A</td><td>Amount owed, log-scaled against the largest balance</td><td>0.30</td></tr>
+<tr><td>D</td><td>Aging bucket weight: current 0.05, 0-30 days 0.35, 31-60 days 0.60, 61-90 days 0.85, 90+ days 1.00</td><td>0.25</td></tr>
+<tr><td>R</td><td>Payment-history risk = 1 − on-time rate (new customers 0.5)</td><td>0.15</td></tr>
+<tr><td>C</td><td>How much of the forecast cash gap the overdue amount covers</td><td>0.15</td></tr>
+<tr><td>P</td><td>Probability of a payment within 7 days: a logistic regression trained on this business's own past invoices when there are at least 40 examples and 10 positives, otherwise transparent rules</td><td>0.15</td></tr>
+</table>
+<p>The score maps to a suggested action (stop credit and visit, visit, call, offer a 2% early-payment discount, send a reminder, or wait) and to a reminder tone (friendly, firm or final) that follows how late the invoice is and how risky the customer is. A new customer gets a starting credit limit. The LLM fills a template with only the customer's name, amount, due date and tone; it sees no other customer data, and its output is checked against the template's figures.</p>
+
+<h3>2.3 AI credit scoring (explainable)</h3>
+<p><b>Goal:</b> a score from 300 to 900 with transparent reasons, computed over the last 6 to 12 months.</p>
+<table>
+<tr><th>Factor</th><th>Definition (normalized 0 to 1)</th><th>Weight</th><th>Healthy baseline</th></tr>
+<tr><td>f1</td><td>Average monthly income, log-scaled (about 500 to 500,000)</td><td>0.20</td><td>0.50</td></tr>
+<tr><td>f2</td><td>Income stability = 1 − coefficient of variation</td><td>0.15</td><td>0.60</td></tr>
+<tr><td>f3</td><td>Share of months with positive net cash flow</td><td>0.20</td><td>0.75</td></tr>
+<tr><td>f4</td><td>1 − (outstanding receivables ÷ monthly income), clipped to 0 to 1</td><td>0.15</td><td>0.70</td></tr>
+<tr><td>f5</td><td>On-time repayment rate (neutral 0.5 when there is no repayment history yet)</td><td>0.20</td><td>0.90</td></tr>
+<tr><td>f6</td><td>Business age in months ÷ 60, capped at 1</td><td>0.10</td><td>0.40</td></tr>
+</table>
+<div class="f">S = 300 + 600 · Σᵢ₌₁⁶ wᵢ fᵢ        Contributionᵢ = 600 · wᵢ · (fᵢ − bᵢ)</div>
+<table>
+<tr><th>Score</th><th>Band</th></tr>
+<tr><td>750 to 900</td><td>Excellent</td></tr><tr><td>650 to 749</td><td>Good</td></tr><tr><td>550 to 649</td><td>Fair</td></tr><tr><td>300 to 549</td><td>Needs improvement</td></tr>
+</table>
+<p><b>Explainability.</b> Each factor's contribution is measured against a baseline bᵢ, the value for a typical healthy business. The largest positive and negative contributions are shown as reasons, for example: "High outstanding receivables lowered your score by 38 points." A new account with little data is labelled "only a starting point" and told exactly which data to add, and the confidence of the score is shown.</p>
+<p><b>How to raise it.</b> The planner re-runs the same formula for each possible action (for example collecting a specific overdue invoice, or paying the next bills on time) and reports the points each would earn and the steps to the next band and the next loan type. Nothing is guessed.</p>
+<p><span class="pl">Planned:</span> once real repayment outcomes are available, a gradient-boosted model could replace the fixed weights, with SHAP values keeping each score explainable.</p>
+
+<h3>2.4 Loan readiness and recommendation</h3>
+<p><b>Goal:</b> estimate a safe loan amount and matching products. The output is an estimate, not a loan approval.</p>
+<ol>
+<li><b>Conservative capacity.</b> Take the 25th percentile of monthly net cash flow over the last 12 months (NCF<sub>p25</sub>), so one strong month cannot inflate capacity.</li>
+<li><b>Safe monthly installment.</b> Take a share α of that, set by credit band, minus existing installments: α = 0.40 (Excellent), 0.35 (Good), 0.25 (Fair), 0.15 (Needs improvement).</li>
+<li><b>Maximum principal.</b> Invert the standard EMI formula, with r the monthly interest rate and n the tenure in months.</li>
+<li><b>Product matching.</b> The loan catalog has 8 loan types with minimum scores from 500 to 700 and different rates. Keep the products where the business's score meets <code>min_score</code> and P<sub>max</sub> covers <code>min_amount</code>; rank by total cost of credit, lowest first. Each type is shown with a status such as available, too small to repay, or score too low.</li>
+<li><b>Readiness checklist.</b> Rule-based actions that would raise the score or capacity, such as "Collect receivables older than 30 days".</li>
+</ol>
+<div class="f">SafeEMI = α · NCF<sub>p25</sub> − ExistingEMI<br>P<sub>max</sub> = SafeEMI · ((1+r)ⁿ − 1) / (r (1+r)ⁿ)</div>
+<p>Owners can record loans they already have (<i>My loans</i>); their installments then count in the cash forecast and in the credit score. Introduction requests to a lender need the owner's consent and are only recorded and tracked; nothing is sent to a lender in this version.</p>
+
+<h3>2.5 What-if simulator</h3>
+<p>The user changes inputs, such as a new loan, a sales change of x%, or a new fixed expense, and the Forecast Engine re-runs with them. The original and scenario balance curves are shown side by side.</p>
+<div class="f">Î'(t) = Î(t)(1 + x),  Ê'(t) = Ê(t) + NewExpense + NewEMI</div>
+
+<h3>2.6 Insight engine</h3>
+<p>Rule-based checks compare each expense category's last 30 days with its monthly average over the 90 days before. A change over 20% raises an insight, which the LLM phrases for the dashboard summary. The same engine produces the monthly profit-and-loss report.</p>
+
+<h3>2.7 Cash Advisor (action plan)</h3>
+<p>When the forecast shows a shortage, the planner orders the cheapest and safest steps first: (1) collect overdue money from the highest-scoring customers, (2) clear slow and dead stock at a discount, (3) ask suppliers to delay bills that fall before the gap, (4) cut owner drawings and spending that jumped, (5) scale up the star products once there is spare cash, and (6) financing, only for what is still missing after steps 1 to 4. Each step is applied to the forecast to measure its real effect, and the plan shows how much of the gap it covers. The owner marks steps done, dismisses or reopens them; nothing executes by itself.</p>
+
+<h3>2.8 Supplier payment plans</h3>
+<p>The payables engine builds a dated 30-day cash flow in which every amount is counted exactly once and tagged confirmed or estimated, finds days where payments clash with low cash, and proposes steps (instalments, moving a bill, short-term financing) that actually lift the lowest balance above the safety level. A draft message to the supplier is written from a template with the supplier's name masked; the owner approves the plan and records the supplier's reply. Financing offers shown are demo data.</p>
+
+<h3>2.9 Product performance</h3>
+<p>For each product over the last 30 and 90 days: units, revenue and growth, gross margin, profit contribution, inventory turnover, days of stock left, and cash conversion speed (cash versus credit sales and how long credit takes to come back). Products are classed as star, cash cow, slow mover, dead stock or new, and each gets a recommendation (push, keep, shrink, clear).</p>
+
+<h3>2.10 AI financial agent</h3>
+<p>The agent runs a bounded tool-use loop of at most 5 steps. Its tools are <code>get_cash_forecast</code>, <code>get_overdue_customers</code>, <code>get_credit_score</code>, <code>get_loan_recommendation</code>, <code>run_what_if</code>, <code>get_spending_insights</code> and <code>draft_reminder</code>.</p>
+<ol>
+<li>Send the system prompt, the user's question and the tool schemas to the LLM.</li>
+<li>If the LLM requests a tool, validate the arguments, run the engine with the <code>business_id</code> from the authenticated session, and return the result to the LLM.</li>
+<li>Repeat until the LLM answers in text, or stop at 5 steps with a fallback message.</li>
+</ol>
+<p>Three grounding rules apply: every number in an answer must come from a tool result; the model can never choose the <code>business_id</code>; and all tools are read-only, so any action such as sending a reminder needs the user's confirmation in the UI. If no LLM provider is reachable, the agent falls back to keyword intents and template answers, so the chat always works.</p>
+
+<h3>2.11 Alerts and the daily job</h3>
+<p>Sixteen rules (cash shortage, cash already low, overdue customers, late and due invoices, bills due, supplier plan payments, loan installments, low stock, credit score drops, spending spikes, sales drops, lender follow-ups, goal deadlines, bank reminders, plan and trial reminders) create notifications with a severity and a link to the page that fixes the problem. Each rule runs in isolation, so one failure does not stop the others, and a dedupe key plus cooldown prevents repeats. A daily job refreshes score snapshots and action plans and can email urgent alerts once per day.</p>
+
+<h2 class="pb">3. Security Design</h2>
+<p>Every request is authenticated, every query is scoped to one business, contact details are encrypted at field level, and the AI agent can only read data through scoped, read-only tools.</p>
+
+<h3>3.1 Authentication</h3>
+<table>
+<tr><th>Control</th><th>Implementation</th></tr>
+<tr><td>Password storage</td><td>bcrypt, cost factor 12</td></tr>
+<tr><td>Access token</td><td>JWT (HS256), 15-minute lifetime</td></tr>
+<tr><td>Refresh token</td><td>Rotating, 7-day lifetime, stored server-side by id so it can be revoked, in an httpOnly, secure, SameSite=Strict cookie</td></tr>
+<tr><td>Brute-force protection</td><td>Rate limits per client address and signed-in user (10 auth requests per minute); the account locks for 15 minutes after 5 failed logins</td></tr>
+<tr><td>Second factor</td><td>Optional authenticator-app code (TOTP, 6 digits, 30 seconds). SMS codes are not used.</td></tr>
+</table>
+
+<h3>3.2 Authorization and tenant isolation</h3>
+<ul>
+<li><b>business_id scoping.</b> Every business-owned record has a <code>business_id</code>. Every query filters by the business of the authenticated user, never by one sent in the request.</li>
+<li><b>Row-Level Security.</b> PostgreSQL RLS policies (forced, with the business set per request) enforce the same rule in the database as a second line of defence. The database role must not be a superuser. Seed, background jobs and the lender view run with an explicit bypass flag.</li>
+<li><b>Object-level checks.</b> Any ID in a URL, such as <code>/invoices/{id}</code>, is checked for ownership before it is read or changed.</li>
+<li><b>Roles.</b> owner (full access), staff (transactions, ledger and customers only), lender (read-only, consent-scoped). Premium features are additionally gated by plan.</li>
+</ul>
+
+<h3>3.3 Data protection</h3>
+<table>
+<tr><th>Data</th><th>Protection</th></tr>
+<tr><td>In transit</td><td>TLS on every connection (provided by the hosts), HSTS header</td></tr>
+<tr><td>At rest</td><td>Database and disk encryption provided by the database host</td></tr>
+<tr><td>Contact details</td><td>Customer phone numbers and emails encrypted at field level (Fernet, AES-based)</td></tr>
+<tr><td>Bank access tokens</td><td>Stored encrypted and never sent to the browser</td></tr>
+<tr><td>Receipts and imports</td><td>Processed in memory and not stored; only the confirmed transaction is saved</td></tr>
+<tr><td>Backups</td><td>Handled by the database host</td></tr>
+<tr><td>Secrets</td><td>Free-tier LLM API keys, database credentials and provider keys kept in backend environment secrets, never sent to the client or committed to git</td></tr>
+</table>
+
+<h3>3.4 Consent-based lender access</h3>
+<p>Lenders see a business's score and reports only after the owner grants access. Each grant names its scope (which data), has an expiry date and can be revoked at any time. The token is shown once and stored hashed. Every lender view is written to the audit log.</p>
+
+<h3>3.5 AI-specific security</h3>
+<p>Free-tier providers may keep or review submitted data, so only minimal fields are sent to them: amounts, dates and category names, with customer and supplier names replaced by codes, and never phone numbers, emails or account details. Owners choose cloud, local-only or no AI in Settings; in local-only mode only a model on the server is used.</p>
+<table>
+<tr><th>Risk</th><th>Mitigation</th></tr>
+<tr><td>Prompt injection through user data (a transaction note or receipt text)</td><td>Tool results and receipt text are passed as data, and the prompts tell the model to ignore any instructions inside them</td></tr>
+<tr><td>Cross-tenant data leak</td><td>Tools take <code>business_id</code> from the server session; the model cannot choose which business to query</td></tr>
+<tr><td>Unauthorized actions</td><td>All agent tools are read-only; side effects such as sending a reminder need explicit user confirmation</td></tr>
+<tr><td>Hallucinated figures</td><td>Numbers come only from engine outputs, and any figure in an answer that is not in the tool results causes the answer to be replaced by a template</td></tr>
+<tr><td>Over-sharing with the LLM</td><td>Only the fields a tool needs are sent; no passwords, tokens or contact lists</td></tr>
+<tr><td>Runaway loops and cost abuse</td><td>At most 5 tool steps per request, a request timeout, and per-user AI rate limits (20 per minute)</td></tr>
+</table>
+
+<h3>3.6 Application security</h3>
+<ul>
+<li><b>Input validation:</b> Pydantic schemas on every endpoint, with type, range and length checks.</li>
+<li><b>SQL injection:</b> ORM with parameterized queries only.</li>
+<li><b>Cross-site scripting:</b> React output escaping; the API replies with <code>Content-Security-Policy: default-src 'none'; frame-ancestors 'none'</code>.</li>
+<li><b>CSRF:</b> the refresh cookie is SameSite=Strict, and the cookie-authenticated route also requires a custom <code>X-Requested-With</code> header that a cross-site form cannot set.</li>
+<li><b>File uploads:</b> type and size limits (CSV up to 2 MB; JPEG, PNG or WebP images up to 5 MB); files are processed in memory.</li>
+<li><b>Rate limiting:</b> per client address and signed-in user on auth (10 per minute), AI (20 per minute) and upload (10 per minute) endpoints. The limiter is in memory; it would move to Redis for several workers.</li>
+<li><b>Security headers:</b> HSTS, <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: DENY</code>, <code>Referrer-Policy: no-referrer</code>, <code>Cache-Control: no-store</code>.</li>
+<li><b>Messaging:</b> reminders are sent only when the owner presses Send; subject lines are protected against header injection; a failed send keeps the draft and shows the provider's reason.</li>
+</ul>
+
+<h3>3.7 Monitoring and audit</h3>
+<p>The audit log records signups, logins (including failed ones), onboarding, data exports, lender access grants, views and revocations, reminders sent, payment plan approvals, bank connections, staff changes, two-factor changes, plan changes and settings changes. Application logs never contain passwords, tokens or full financial records. <span class="pl">Planned:</span> alerts on logins from unusual locations and on bulk data access.</p>
+
+<h3>3.8 Responsible AI and compliance</h3>
+<ul>
+<li>Every credit score shows the factors behind it.</li>
+<li>Loan output is labelled "Estimate only, not a loan approval."</li>
+<li>Introduction to a lender needs an explicit consent tick.</li>
+<li>Users can export or delete their data at any time (account deletion also cancels a subscription first).</li>
+<li>The design follows data-minimization and consent principles in line with GDPR-style practice and applicable local data-protection rules. We do not claim certifications or a penetration test.</li>
+</ul>
+
+<h3>3.9 Threat summary</h3>
+<table>
+<tr><th>Threat</th><th>Controls</th></tr>
+<tr><td>Account takeover</td><td>bcrypt, rate limits, 15-minute lockout, optional second factor, short-lived tokens, rotating refresh tokens</td></tr>
+<tr><td>Cross-business data access</td><td>business_id scoping, Row-Level Security, object-level checks</td></tr>
+<tr><td>Data breach</td><td>TLS, encryption at rest by the host, field-level encryption of contact details and bank tokens</td></tr>
+<tr><td>Prompt injection</td><td>Data and instruction separation, read-only tools, figure checking</td></tr>
+<tr><td>Unauthorized lender viewing</td><td>Explicit, scoped, expiring, revocable consent with an audit log</td></tr>
+<tr><td>Injection attacks</td><td>ORM, input validation, API content security policy</td></tr>
+<tr><td>Abuse of AI endpoints</td><td>Rate limits, step limits, request timeouts</td></tr>
+</table>
+
+<h2>4. Testing and deployment</h2>
+<ul>
+<li><b>Tests:</b> more than 260 automated tests (pytest) cover the engines, the API, the notification rules, the delivery layer, the credit planner, secret cleaning and PostgreSQL row-level security (opt-in, against a scratch database).</li>
+<li><b>Migrations:</b> eight Alembic migrations create the schema; row-level security and the loan catalog are part of them.</li>
+<li><b>Deployment:</b> Vercel (website), Render (API in a Docker container) and Neon (PostgreSQL), all on free tiers; step-by-step in <code>docs/deploy.md</code>. Optional services (email, WhatsApp, bank import, Stripe) switch on with environment variables and stay off otherwise.</li>
+<li><b>Manual test cases:</b> <code>docs/manual-test-cases.md</code>.</li>
+</ul>
+
+<h2 class="pb">5. Current limits and roadmap</h2>
+<table>
+<tr><th>Built and working</th><th>Not built yet (planned)</th></tr>
+<tr><td>Forecast, what-if, Cash Advisor, collections and reminders, supplier plans, products, credit score and planner, loan center, reports, AI agent, alerts<br>Staff logins, plans, two-factor, lender consent, row-level security<br>CSV import, receipt scan, bank import (sandbox)<br>Hosted deployment</td>
+<td>Real lender integrations and a live loan marketplace<br>Live payments for the Pro plan (billing is demo mode)<br>Production bank connections and mobile-wallet import<br>A verified-domain email sender and approved WhatsApp templates<br>Malware scanning of uploads; unusual-login alerts; Redis rate limiter<br>A learned credit model (gradient boosting with SHAP)</td></tr>
+</table>
+</body></html>
